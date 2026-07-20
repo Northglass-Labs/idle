@@ -1,0 +1,30 @@
+# Timestamp display — captures session-row and message timestamps for visual
+# verification of recent and older entries.
+#
+# Prereqs: simulator authenticated with at least one session. A session older
+# than 24 hours exercises the absolute-date presentation.
+# Run: ../scripts/run-authed.sh flows/07-timestamp-display.yaml
+appId: ${APP_ID}
+---
+- launchApp:
+    clearState: false
+- assertVisible:
+    id: "sessions-list"
+
+# Capture the sessions list. Each row's timestamp should be one of:
+#   "Xm" (<60min), "Xh" (<24h), or "MMM D H:MM AM/PM" (>=24h)
+- takeScreenshot: sessions-list-timestamps
+
+# Open the first session and capture its oldest visible message timestamps.
+- tapOn:
+    id: "session-row"
+    index: 0
+- assertVisible:
+    id: "session-screen"
+- swipe:
+    direction: DOWN
+    duration: 600
+- swipe:
+    direction: DOWN
+    duration: 600
+- takeScreenshot: chat-old-message-timestamps

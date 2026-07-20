@@ -1,0 +1,104 @@
+# docker-compose.yml — one-touch local self-host of the Idle stack.
+#
+# Brings up:
+#   - idle-server: the relay (port 3005, PGlite embedded, data volume)
+#   - idle-webapp: the web UI (port 8080, static Expo export served by nginx)
+#
+# Quick start (paste the persistent value from your secret manager):
+#   (
+#     cleanup() { stty echo 2>/dev/null || true; unset IDLE_MASTER_SECRET; }
+#     trap cleanup EXIT
+#     printf 'Idle master secret (64 hex characters): ' >&2
+#     stty -echo
+#     IFS= read -r IDLE_MASTER_SECRET
+#     stty echo
+#     printf '\n' >&2
+#     export IDLE_MASTER_SECRET
+#     docker compose up -d --build
+#   )
+#
+#   # Verify
+#   curl http://localhost:3005/health   # server
+#   open http://localhost:8080          # web app (point it at server below)
+#
+# Point your CLI at the relay:
+#   IDLE_SERVER_URL=http://localhost:3005 idle
+#
+# The webapp container builds with EXPO_PUBLIC_IDLE_SERVER_URL baked in at
+# build time. If you change the server URL, rebuild: docker compose build idle-webapp
+#
+# For a public deploy (custom domain + TLS) add a reverse proxy in front
+# (Caddy / Traefik / Cloudflare Tunnel). See docs/SELF-HOSTING.md.
+
+secrets:
+  idle_master_secret:
+    environment: IDLE_MASTER_SECRET
+
+services:
+  idle-server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: idle-server:local
+    container_name: idle-server
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,nodev
+    ports:
+      # This Compose profile is intentionally local-only. A host reverse proxy
+      # can reach loopback without exposing plaintext relay traffic to the LAN.
+      - "127.0.0.1:3005:3005"
+    environment:
+      IDLE_MASTER_SECRET_FILE: /run/secrets/idle_master_secret
+      IDLE_AUTH_AUDIENCE: ${IDLE_AUTH_AUDIENCE:-http://localhost:3005}
+      NODE_ENV: production
+      PORT: "3005"
+      # Bind all interfaces inside the container so the published port is
+      # reachable. The server defaults to loopback-only outside containers; the image
+      # sets HOST=0.0.0.0, and we set it here too to make the requirement
+      # explicit to anyone reading this file.
+      HOST: "0.0.0.0"
+      # PGLITE_DIR + DATA_DIR are set in the Dockerfile; volume below
+      # makes them survive container restarts.
+    volumes:
+      - idle-data:/data
+    secrets:
+      - source: idle_master_secret
+        target: idle_master_secret
+        uid: "1000"
+        gid: "1000"
+        mode: 0400
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3005/health').then(response => { if (!response.ok) process.exit(1); }).catch(() => process.exit(1));"]
+      interval: 30s
+      timeout: 5s
+      start_period: 20s
+      retries: 3
+
+  idle-webapp:
+    build:
+      context: .
+      dockerfile: Dockerfile.webapp
+      args:
+        # Where the web app should talk to the relay. Defaults to the
+        # compose service URL for local-only; override with an env var
+        # when deploying to a real host.
+        EXPO_PUBLIC_IDLE_SERVER_URL: ${EXPO_PUBLIC_IDLE_SERVER_URL:-http://localhost:3005}
+    image: idle-webapp:local
+    container_name: idle-webapp
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,nodev,mode=1777
+    ports:
+      - "127.0.0.1:8080:8080"
+    depends_on:
+      idle-server:
+        condition: service_healthy
+
+volumes:
+  # Persists PGlite database + local-mode file storage across compose down/up.
+  # To wipe: docker compose down -v
+  idle-data:
+    driver: local

@@ -1,0 +1,40 @@
+# Open Links In toggle — verifies Settings → Appearance → "Open Links In"
+# cycles between in-app browser and external browser.
+#
+# This flow asserts:
+#   1. The Item is present in Settings → Appearance
+#   2. Default state renders "In-app browser" in the detail
+#   3. Tapping the row flips to "External browser"
+#   4. Tapping again flips back to "In-app browser"
+#
+# Prereqs: simulator authenticated; nav to Settings is reachable.
+# Run: ../scripts/run-authed.sh flows/09-open-links-in-toggle.yaml
+appId: ${APP_ID}
+---
+- launchApp:
+    clearState: false
+- assertVisible:
+    id: "sessions-list"
+
+# Navigate to the appearance settings.
+- tapOn: "Settings"
+- tapOn: "Appearance"
+- assertVisible: "Open Links In"
+- takeScreenshot: appearance-with-links-toggle
+
+# The detail row starts with the documented in-app default.
+- assertVisible: "In-app browser"
+
+# Toggle from in-app to external.
+- tapOn: "Open Links In"
+- assertVisible: "External browser"
+- takeScreenshot: links-toggled-to-external
+
+# Toggle back to in-app.
+- tapOn: "Open Links In"
+- assertVisible: "In-app browser"
+- takeScreenshot: links-toggled-back-to-in-app
+
+# Return to the session list.
+- back
+- back

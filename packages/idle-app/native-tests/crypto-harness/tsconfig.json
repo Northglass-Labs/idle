@@ -1,0 +1,12 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "incremental": false,
+    "paths": {
+      "@/*": ["../../sources/*"]
+    },
+    "types": ["react"]
+  },
+  "include": ["./*.ts", "./*.tsx"],
+  "exclude": ["android", "ios", "node_modules"]
+}

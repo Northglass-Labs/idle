@@ -1,0 +1,26 @@
+# Idle project gitleaks config.
+#
+# This file inherits gitleaks' built-in default secret-detection ruleset via
+# useDefault, plus a small allowlist for known false positives in this repo.
+# Additional policy can be layered by automation without adding machine-specific
+# paths or values to this portable project configuration.
+title = "Idle Gitleaks Configuration"
+
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Let the dedicated GCP rule own Firebase-format client identifiers instead of reporting the generic rule twice"
+targetRules = ["generic-api-key"]
+regexTarget = "secret"
+regexes = [
+    '''^AIza[0-9A-Za-z_-]{35}$''',
+]
+
+[[allowlists]]
+description = "Treat public libsodium wrapper export symbols as API names rather than credentials"
+targetRules = ["generic-api-key"]
+regexTarget = "secret"
+regexes = [
+    '''^crypto_(aead|kdf)_[A-Za-z0-9_]+$''',
+]

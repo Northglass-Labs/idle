@@ -1,0 +1,30 @@
+{
+  "name": "idle-native-crypto-harness",
+  "version": "0.0.0",
+  "private": true,
+  "main": "index.tsx",
+  "scripts": {
+    "bundle:ios": "expo export:embed --platform ios --dev false --entry-file index.tsx --bundle-output /tmp/idle-native-crypto-harness.bundle",
+    "ios": "./run-ios.sh",
+    "typecheck": "tsc --noEmit --project tsconfig.json",
+    "verify": "node ./verify-isolation.mjs"
+  },
+  "dependencies": {
+    "@more-tech/react-native-libsodium": "^1.5.5",
+    "expo": "~55.0.27",
+    "expo-crypto": "~55.0.0",
+    "react": "19.2.0",
+    "react-native": "0.83.1",
+    "react-native-quick-base64": "^2.2.1",
+    "rn-encryption": "^2.5.0"
+  },
+  "devDependencies": {
+    "@types/react": "~19.1.10",
+    "typescript": "5.9.3"
+  },
+  "expo": {
+    "autolinking": {
+      "exclude": ["@expo/dom-webview"]
+    }
+  }
+}

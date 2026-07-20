@@ -1,0 +1,158 @@
+{
+  "name": "idle-coder",
+  "version": "0.4.13",
+  "description": "Remote-control CLI for Claude Code, Codex, Gemini, OpenClaw, and ACP agents through Idle",
+  "author": "Northglass",
+  "license": "MIT",
+  "type": "module",
+  "homepage": "https://idle.northglass.io",
+  "bugs": "https://github.com/Northglass-Labs/idle/issues",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Northglass-Labs/idle.git"
+  },
+  "bin": {
+    "idle": "bin/idle.mjs",
+    "idle-mcp": "bin/idle-mcp.mjs"
+  },
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.cts",
+  "exports": {
+    ".": {
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      },
+      "import": {
+        "types": "./dist/index.d.mts",
+        "default": "./dist/index.mjs"
+      }
+    },
+    "./lib": {
+      "require": {
+        "types": "./dist/lib.d.cts",
+        "default": "./dist/lib.cjs"
+      },
+      "import": {
+        "types": "./dist/lib.d.mts",
+        "default": "./dist/lib.mjs"
+      }
+    },
+    "./codex/idleMcpStdioBridge": {
+      "require": {
+        "types": "./dist/codex/idleMcpStdioBridge.d.cts",
+        "default": "./dist/codex/idleMcpStdioBridge.cjs"
+      },
+      "import": {
+        "types": "./dist/codex/idleMcpStdioBridge.d.mts",
+        "default": "./dist/codex/idleMcpStdioBridge.mjs"
+      }
+    }
+  },
+  "files": [
+    "LICENSE",
+    "dist",
+    "bin/idle.mjs",
+    "bin/idle-mcp.mjs",
+    "scripts/claude_local_launcher.cjs",
+    "scripts/claude_version_utils.cjs",
+    "scripts/ripgrep_launcher.cjs"
+  ],
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "build": "shx rm -rf dist && tsc --noEmit && pkgroll",
+    "test": "$npm_execpath run build && cross-env IDLE_RUN_LIVE_AGENT_INTEGRATION=0 vitest run",
+    "test:unit": "$npm_execpath run build && vitest run --project=unit",
+    "test:integration": "$npm_execpath run build && cross-env IDLE_RUN_LIVE_AGENT_INTEGRATION=0 vitest run --project=integration-empty --project=integration-authenticated",
+    "test:integration:live": "$npm_execpath run build && cross-env IDLE_RUN_LIVE_AGENT_INTEGRATION=1 vitest run --project=integration-empty --project=integration-authenticated --project=integration-live-empty --project=integration-live-plan-mode --project=integration-live-authenticated",
+    "start": "$npm_execpath run build && node ./bin/idle.mjs",
+    "cli": "tsx src/index.ts",
+    "dev": "tsx src/index.ts",
+    "dev:local-server": "$npm_execpath run build && node scripts/env-wrapper.cjs local",
+    "prepublishOnly": "$npm_execpath run build && $npm_execpath run test:unit",
+    "stable": "node scripts/env-wrapper.cjs stable",
+    "dev:variant": "node scripts/env-wrapper.cjs dev",
+    "stable:daemon:start": "node scripts/env-wrapper.cjs stable daemon start",
+    "stable:daemon:stop": "node scripts/env-wrapper.cjs stable daemon stop",
+    "stable:daemon:status": "node scripts/env-wrapper.cjs stable daemon status",
+    "stable:auth": "node scripts/env-wrapper.cjs stable auth",
+    "dev:daemon:start": "node scripts/env-wrapper.cjs dev daemon start",
+    "dev:daemon:stop": "node scripts/env-wrapper.cjs dev daemon stop",
+    "dev:daemon:status": "node scripts/env-wrapper.cjs dev daemon status",
+    "dev:auth": "node scripts/env-wrapper.cjs dev auth",
+    "setup:dev": "node scripts/setup-dev.cjs",
+    "doctor": "node scripts/env-wrapper.cjs stable doctor",
+    "link:dev": "node scripts/link-dev.cjs",
+    "unlink:dev": "node scripts/link-dev.cjs unlink",
+    "bundle:server": "node scripts/bundle-server.cjs",
+    "bundle:server:all": "node scripts/bundle-server.cjs --all-platforms",
+    "bundle:webapp": "node scripts/bundle-webapp.cjs",
+    "cli:install": "node scripts/install-local.cjs"
+  },
+  "dependencies": {
+    "@agentclientprotocol/sdk": "^0.14.1",
+    "@anthropic-ai/claude-agent-sdk": "^0.3.207",
+    "@anthropic-ai/sandbox-runtime": "^0.0.37",
+    "@modelcontextprotocol/sdk": "1.29.0",
+    "@noble/ed25519": "^3.0.0",
+    "@noble/hashes": "^2.0.1",
+    "@northglass/idle-server": "0.4.0",
+    "@paralleldrive/cuid2": "^2.2.2",
+    "@stablelib/base64": "^2.0.1",
+    "@stablelib/hex": "^2.0.1",
+    "@types/cross-spawn": "^6.0.6",
+    "@types/ps-list": "^6.2.1",
+    "@types/qrcode-terminal": "^0.12.2",
+    "@types/react": "^19.2.7",
+    "@types/tmp": "^0.2.6",
+    "axios": "^1.15.3",
+    "chalk": "^5.6.2",
+    "cross-spawn": "^7.0.6",
+    "expo-server-sdk": "^3.15.0",
+    "fastify": "^5.6.2",
+    "fastify-type-provider-zod": "^6.1.0",
+    "ink": "^6.5.1",
+    "inquirer": "^13.2.2",
+    "open": "^10.2.0",
+    "ps-list": "^8.1.1",
+    "qrcode-terminal": "^0.12.0",
+    "react": "^19.2.0",
+    "socket.io-client": "^4.8.1",
+    "shell-quote": "^1.8.4",
+    "tmp": "^0.2.5",
+    "tweetnacl": "^1.0.3",
+    "ws": "^8.21.0",
+    "zod": "^4.0.0"
+  },
+  "devDependencies": {
+    "@anthropic-ai/sdk": "^0.93.0",
+    "@eslint/compat": "^1",
+    "@northglass/idle-wire": "0.4.3",
+    "@types/inquirer": "^9.0.9",
+    "@types/node": ">=20",
+    "@types/ws": "^8.18.1",
+    "cross-env": "^10.1.0",
+    "eslint": "^9",
+    "eslint-config-prettier": "^10",
+    "pkgroll": "^2.14.2",
+    "shx": "^0.3.3",
+    "ts-node": "^10",
+    "tsx": "^4.20.6",
+    "typescript": "5.9.3",
+    "vitest": "^3.2.6"
+  },
+  "resolutions": {
+    "whatwg-url": "14.2.0",
+    "parse-path": "7.0.3",
+    "@types/parse-path": "7.0.3"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org"
+  },
+  "packageManager": "yarn@1.22.22"
+}

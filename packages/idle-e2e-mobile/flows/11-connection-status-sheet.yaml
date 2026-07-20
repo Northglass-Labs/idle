@@ -1,0 +1,53 @@
+# Connection status sheet — verifies the tappable status indicator (UI behavior).
+#
+# The composer status indicator opens a sheet with connection details and
+# retry controls.
+#
+# Prereqs: simulator authenticated; ≥1 active session (the indicator is in AgentInput which
+# only renders inside a session view).
+# Run: ../scripts/run-authed.sh flows/11-connection-status-sheet.yaml
+appId: ${APP_ID}
+---
+- launchApp:
+    clearState: false
+- assertVisible:
+    id: "sessions-list"
+
+# Enter a session — the composer footer is where the status indicator lives.
+- tapOn:
+    id: "session-row"
+    index: 0
+- assertVisible:
+    id: "agent-input-text"
+
+# The connection-status indicator is a Pressable wrapping the dot and status text.
+# Its stable test ID keeps this flow deterministic.
+- assertVisible:
+    id: "connection-status-pressable"
+- takeScreenshot: connection-status-indicator-rendered
+
+# Tap to open the sheet.
+- tapOn:
+    id: "connection-status-pressable"
+- assertVisible:
+    id: "connection-status-sheet"
+- takeScreenshot: connection-status-sheet-opened
+
+# Show details toggle expands diagnostic info (server URL, last connected, etc.).
+- tapOn:
+    id: "connection-status-sheet-toggle"
+- assertVisible: "Server"
+- takeScreenshot: connection-status-sheet-details-expanded
+
+# Hide details again.
+- tapOn:
+    id: "connection-status-sheet-toggle"
+
+# Close the sheet via system back (the Modal's onRequestClose handler).
+- back
+
+# Verify the sheet closed cleanly and we're back in the session view.
+- assertVisible:
+    id: "agent-input-text"
+- assertNotVisible:
+    id: "connection-status-sheet"

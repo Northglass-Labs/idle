@@ -1,0 +1,52 @@
+# Lab subscreen — verifies Settings → Advanced → Lab features opens the
+# per-feature controls.
+#
+# Prereqs: simulator must already be authenticated.
+# Run: ../scripts/run-authed.sh flows/13-lab-subscreen.yaml
+appId: ${APP_ID}
+---
+- launchApp:
+    clearState: false
+- assertVisible:
+    id: "sessions-list"
+
+# Open Settings via the cogwheel in the sidebar header.
+- tapOn:
+    text: "Settings"
+
+# Confirm the settings section headers are present.
+- assertVisible: "Pair Terminal"
+- assertVisible: "Advanced"
+- assertVisible: "Help & Feedback"
+
+# Tap the Lab features row inside Advanced — it routes to /settings/lab.
+- tapOn: "Lab features"
+
+# Verify the Lab section headers.
+- assertVisible: "Composer"
+- assertVisible: "Sessions"
+- assertVisible: "Diagnostics"
+
+# Verify every public Lab row.
+- assertVisible: "Image attachments"
+- assertVisible: "In-session file browser"
+- assertVisible: "Resume disconnected sessions"
+- assertVisible: "Hide inactive sessions"
+- assertVisible: "View usage data"
+
+- takeScreenshot: lab-subscreen-rendered
+
+# The feedback footer exposes the public support address.
+- assertVisible: "hello@northglass.io"
+- takeScreenshot: lab-subscreen-feedback-footer
+
+# Toggle the in-session file browser setting by label.
+- tapOn:
+    text: "In-session file browser"
+- takeScreenshot: lab-fileviewer-tapped
+
+# Navigate back to Settings via system back. We should land back on the
+# Settings root, not bounce to home.
+- back
+- assertVisible: "Pair Terminal"
+- assertVisible: "Lab features"

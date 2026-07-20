@@ -1,0 +1,24 @@
+# Auth flow — fresh-install onboarding through to QR scanner.
+#
+# Goal: verify cold-start onboarding renders the welcome screen, both
+# CTAs are visible, and tapping "Link or restore account" opens the QR
+# scanner. We don't actually scan a QR (that needs the CLI running with
+# a real auth request) — that's the next-level integration test.
+#
+# Run through `yarn test:welcome` or the development-client public suite.
+appId: ${APP_ID}
+---
+- launchApp:
+    clearState: true
+- assertVisible: "Idle"
+- assertVisible: "Codex and Claude Code mobile client"
+- assertVisible: "Create account"
+- assertVisible: "Link or restore account"
+- takeScreenshot: auth-welcome-screen
+
+- tapOn: "Link or restore account"
+- takeScreenshot: auth-after-link-tap
+
+# The linking route exposes scanner instructions.
+- assertVisible: ".*[Ss]can.*"
+- takeScreenshot: auth-qr-scanner-visible

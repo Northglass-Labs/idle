@@ -1,0 +1,32 @@
+# Smoke test for an installed development, preview, or production simulator
+# build. Optional steps accommodate the Expo development-client shell.
+appId: ${APP_ID}
+---
+- launchApp:
+    clearState: false
+
+# Standalone builds skip these optional development-client controls.
+- tapOn:
+    text: "Idle (dev)"
+    optional: true
+
+- tapOn:
+    text: "Continue"
+    optional: true
+
+- tapOn:
+    text: "Close"
+    optional: true
+- tapOn:
+    point: "10%,5%"
+    optional: true
+
+# The connection label confirms that the app's React tree mounted.
+- extendedWaitUntil:
+    visible:
+        text: "disconnected"
+    timeout: 45000
+
+- assertVisible:
+    text: "Idle"
+- takeScreenshot: smoke-launch

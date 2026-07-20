@@ -1,0 +1,114 @@
+name: Verify Web App Release
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'Dockerfile.webapp'
+      - 'docker-compose.yml'
+      - 'nginx.webapp.conf'
+      - 'nginx.webapp.runtime.conf'
+      - 'scripts/container-boundary.test.mjs'
+      - 'package.json'
+      - 'yarn.lock'
+      - 'patches/**'
+      - 'packages/idle-app/**'
+      - 'packages/idle-wire/**'
+      - '.github/workflows/deploy-webapp.yml'
+  pull_request:
+    paths:
+      - 'Dockerfile.webapp'
+      - 'docker-compose.yml'
+      - 'nginx.webapp.conf'
+      - 'nginx.webapp.runtime.conf'
+      - 'scripts/container-boundary.test.mjs'
+      - 'package.json'
+      - 'yarn.lock'
+      - 'patches/**'
+      - 'packages/idle-app/**'
+      - 'packages/idle-wire/**'
+      - '.github/workflows/deploy-webapp.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: verify-webapp-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify-web-release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          persist-credentials: false
+
+      - name: Build canonical web image
+        run: |
+          docker build \
+            --file Dockerfile.webapp \
+            --build-arg EXPO_PUBLIC_IDLE_SERVER_URL=https://relay.example.test \
+            --tag "idle-webapp:${GITHUB_SHA}" \
+            .
+
+      - name: Smoke web image as an unprivileged process on port 8080
+        run: |
+          set -euo pipefail
+          image="idle-webapp:${GITHUB_SHA}"
+          container="idle-webapp-smoke"
+          cleanup() {
+            docker rm --force "$container" >/dev/null 2>&1 || true
+          }
+          trap cleanup EXIT
+
+          docker run \
+            --detach \
+            --read-only \
+            --tmpfs /tmp:rw,noexec,nosuid,nodev,mode=1777 \
+            --name "$container" \
+            --publish 127.0.0.1::8080 \
+            "$image"
+
+          host_binding="$(docker port "$container" 8080/tcp)"
+          host_port="${host_binding##*:}"
+          case "$host_port" in
+            ''|*[!0-9]*)
+              echo "Docker did not assign a loopback port for container port 8080."
+              exit 1
+              ;;
+          esac
+
+          for attempt in {1..30}; do
+            if curl --fail --silent --show-error \
+              "http://127.0.0.1:${host_port}/" \
+              --output /tmp/idle-webapp-index.html; then
+              break
+            fi
+            if [[ "$attempt" == 30 ]]; then
+              docker logs "$container"
+              exit 1
+            fi
+            sleep 1
+          done
+
+          test -s /tmp/idle-webapp-index.html
+          test "$(docker exec "$container" id -u)" -ne 0
+          docker exec "$container" test ! -w /usr/share/nginx/html/index.html
+          docker exec "$container" \
+            sh -c "grep -R -q 'https://relay.example.test' /usr/share/nginx/html"
+
+      - name: Reject fixable high-severity image vulnerabilities
+        run: |
+          set -euo pipefail
+          archive="$RUNNER_TEMP/idle-webapp.tar"
+          docker save --output "$archive" "idle-webapp:${GITHUB_SHA}"
+          docker run --rm \
+            --volume "$RUNNER_TEMP:/scan:ro" \
+            anchore/grype@sha256:391bfda62888fb4e98ff5c4c81598f7431a3c1eac3f8519d69d1ff00df247c1d \
+            docker-archive:/scan/idle-webapp.tar \
+            --only-fixed \
+            --fail-on high \
+            --output table

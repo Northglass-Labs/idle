@@ -1,0 +1,3 @@
+# Screenshots produced by takeScreenshot — ephemeral debugging artifacts,
+# don't commit. Maestro also writes timestamped copies to ~/.maestro/tests/
+*.png

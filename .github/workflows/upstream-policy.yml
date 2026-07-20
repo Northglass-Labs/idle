@@ -1,0 +1,119 @@
+name: Trusted upstream policy
+
+on:
+  pull_request_target:
+    branches: [main]
+    types: [opened, reopened, synchronize, edited, ready_for_review]
+
+permissions:
+  contents: read
+
+jobs:
+  static-policy:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      # pull_request_target deliberately keeps this checkout on the trusted
+      # base repository. The pull-request tree is fetched only as Git objects
+      # and is never checked out, sourced, installed, built, or executed.
+      # This public PR gate intentionally omits the private publication-policy
+      # key so pass/fail status cannot be used as an identity-matching oracle.
+      # The protected-environment job below, or the Keychain-backed local
+      # helper on trusted code, supplies the mandatory private pre-merge scan.
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+      - name: Inspect pull request objects with trusted base scripts
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          GIT_NO_LAZY_FETCH: '1'
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$BASE_SHA" =~ ^[a-f0-9]{40,64}$ ]]
+          [[ "$HEAD_SHA" =~ ^[a-f0-9]{40,64}$ ]]
+          [[ "$PR_NUMBER" =~ ^[0-9]+$ ]]
+
+          git config fetch.fsckObjects true
+          git config transfer.fsckObjects true
+          timeout 60s git fetch --no-tags --depth=1 origin "$BASE_SHA"
+          timeout 60s git fetch \
+            --no-tags \
+            --depth=4098 \
+            --filter=blob:limit=16777217 \
+            origin \
+            "refs/pull/${PR_NUMBER}/head:refs/remotes/policy/pr-head"
+
+          fetched_head="$(git rev-parse --verify refs/remotes/policy/pr-head^{commit})"
+          [[ "$fetched_head" == "$HEAD_SHA" ]]
+          git cat-file -e "${BASE_SHA}^{commit}"
+          git merge-base --is-ancestor "$BASE_SHA" "$HEAD_SHA"
+          commit_count="$(git rev-list --count --max-count=4097 "${BASE_SHA}..${HEAD_SHA}")"
+          [[ "$commit_count" =~ ^[0-9]+$ ]]
+          (( commit_count >= 1 && commit_count <= 4096 ))
+          node scripts/verify-upstream-import.mjs --ci-range "$BASE_SHA" "$HEAD_SHA"
+
+  private-publication:
+    needs: static-policy
+    environment: private-publication-review
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      # The protected environment requires maintainer approval before this job
+      # can receive its private policy key. Scanner code remains the trusted
+      # base commit; candidate content is inspected only through Git objects.
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.base.sha }}
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+      - name: Fetch bounded pull request objects
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          GIT_NO_LAZY_FETCH: '1'
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$BASE_SHA" =~ ^[a-f0-9]{40,64}$ ]]
+          [[ "$HEAD_SHA" =~ ^[a-f0-9]{40,64}$ ]]
+          [[ "$PR_NUMBER" =~ ^[0-9]+$ ]]
+
+          git config fetch.fsckObjects true
+          git config transfer.fsckObjects true
+          timeout 60s git fetch --no-tags --depth=1 origin "$BASE_SHA"
+          timeout 60s git fetch \
+            --no-tags \
+            --depth=4098 \
+            --filter=blob:limit=16777217 \
+            origin \
+            "refs/pull/${PR_NUMBER}/head:refs/remotes/private-policy/pr-head"
+
+          fetched_head="$(git rev-parse --verify refs/remotes/private-policy/pr-head^{commit})"
+          [[ "$fetched_head" == "$HEAD_SHA" ]]
+          git cat-file -e "${BASE_SHA}^{commit}"
+          git merge-base --is-ancestor "$BASE_SHA" "$HEAD_SHA"
+          commit_count="$(git rev-list --count --max-count=4097 "${BASE_SHA}..${HEAD_SHA}")"
+          [[ "$commit_count" =~ ^[0-9]+$ ]]
+          (( commit_count >= 1 && commit_count <= 4096 ))
+      - name: Inspect candidate tree with private publication policy
+        env:
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          IDLE_PUBLICATION_POLICY_KEY: ${{ secrets.IDLE_PUBLICATION_POLICY_KEY }}
+          GIT_NO_LAZY_FETCH: '1'
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$HEAD_SHA" =~ ^[a-f0-9]{40,64}$ ]]
+          node scripts/opsec-boundary.mjs --require-private-policy --tree "$HEAD_SHA"
+          node scripts/check-upstream-cruft.mjs --require-private-policy --tree "$HEAD_SHA"

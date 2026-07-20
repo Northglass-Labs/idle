@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Request TestFlight access privately
+    url: https://northglass.io/#contact
+    about: Use the private contact form. Never include account contact details in a public issue.

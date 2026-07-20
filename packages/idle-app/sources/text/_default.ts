@@ -1,0 +1,1098 @@
+/**
+ * English translations for the Idle app
+ * Values can be:
+ * - String constants for static text
+ * - Functions with typed object parameters for dynamic text
+ */
+
+/**
+ * English plural helper function
+ * @param options - Object containing count, singular, and plural forms
+ * @returns The appropriate form based on count
+ */
+function plural({ count, singular, plural }: { count: number; singular: string; plural: string }): string {
+    return count === 1 ? singular : plural;
+}
+
+export const en = {
+    tabs: {
+        // Tab navigation labels
+        sessions: 'Terminals',
+        settings: 'Settings',
+    },
+
+    common: {
+        // Simple string constants
+        cancel: 'Cancel',
+        done: 'Done',
+        authenticate: 'Authenticate',
+        save: 'Save',
+        saveAs: 'Save As',
+        error: 'Error',
+        success: 'Success',
+        ok: 'OK',
+        continue: 'Continue',
+        back: 'Back',
+        create: 'Create',
+        rename: 'Rename',
+        reset: 'Reset',
+        logout: 'Logout',
+        yes: 'Yes',
+        no: 'No',
+        discard: 'Discard',
+        version: 'Version',
+        copied: 'Copied',
+        copy: 'Copy',
+        scanning: 'Scanning...',
+        urlPlaceholder: 'https://example.com',
+        home: 'Home',
+        message: 'Message',
+        files: 'Files',
+        fileViewer: 'File Viewer',
+        loading: 'Loading...',
+        retry: 'Retry',
+        delete: 'Delete',
+        optional: 'optional',
+        moreActions: 'More actions',
+        dismissHint: 'Dismiss hint',
+    },
+
+    profile: {
+        userProfile: 'User Profile',
+        details: 'Details',
+        firstName: 'First Name',
+        lastName: 'Last Name',
+        username: 'Username',
+        status: 'Status',
+    },
+
+    status: {
+        connected: 'connected',
+        connecting: 'connecting',
+        disconnected: 'disconnected',
+        error: 'error',
+        online: 'online',
+        offline: 'offline',
+        lastSeen: ({ time }: { time: string }) => `last seen ${time}`,
+        permissionRequired: 'permission required',
+        activeNow: 'Active now',
+        unknown: 'unknown',
+        unread: 'new results',
+    },
+
+    time: {
+        justNow: 'just now',
+        minutesAgo: ({ count }: { count: number }) => `${count} minute${count !== 1 ? 's' : ''} ago`,
+        hoursAgo: ({ count }: { count: number }) => `${count} hour${count !== 1 ? 's' : ''} ago`,
+        daysAgo: ({ count }: { count: number }) => `${count} day${count !== 1 ? 's' : ''} ago`,
+    },
+
+    connect: {
+        restoreAccount: 'Restore Account',
+        enterSecretKey: 'Please enter a secret key',
+        invalidSecretKey: 'Invalid secret key. Please check and try again.',
+        enterUrlManually: 'Enter URL manually',
+        enterUrlManuallyInfo: 'Use this when you can\'t scan the QR — copy the idle:// URL from your terminal output and paste it here. Same effect as scanning.',
+    },
+
+    settings: {
+        title: 'Settings',
+        connectedAccounts: 'Connected Accounts',
+        connectAccount: 'Connect account',
+        github: 'GitHub',
+        machines: 'Machines',
+        showOfflineMachines: ({ count }: { count: number }) => count === 1 ? 'Show 1 offline machine' : `Show ${count} offline machines`,
+        hideOfflineMachines: 'Hide offline machines',
+        features: 'Features',
+        account: 'Account',
+        accountSubtitle: 'Manage your account details',
+        appearance: 'Appearance',
+        appearanceSubtitle: 'Customize how the app looks',
+        voiceAssistant: 'Voice Assistant',
+        voiceAssistantSubtitle: 'Configure voice interaction preferences',
+        voiceAssistantInfo: 'While voice is active, Idle sends audio to ElevenLabs, plus active-session titles and summaries, current and relevant background-session transcript updates, opaque session/request IDs, and permission tool names needed for multi-session control. Idle does not separately add stored project paths or permission arguments. Transcript text can itself contain sensitive data. Leave voice off to keep this data out of ElevenLabs.',
+        featuresTitle: 'Features',
+        featuresSubtitle: 'Enable or disable app features',
+        developer: 'Developer',
+        about: 'About',
+        aboutFooter: 'Idle is a mobile client for Codex and Claude Code. Session content is end-to-end encrypted. The relay stores the account, routing, and operational metadata needed to sync; account keys remain on authorized devices. Not affiliated with Anthropic.',
+        whatsNew: 'What\'s New',
+        whatsNewSubtitle: 'See the latest updates and improvements',
+        reportIssue: 'Report an Issue',
+        privacyPolicy: 'Privacy Policy',
+        termsOfService: 'Terms of Service',
+        eula: 'EULA',
+        supportUs: 'Support us',
+        supportUsSubtitlePro: 'Thank you for your support!',
+        supportUsSubtitle: 'Support project development',
+        scanQrCodeToAuthenticate: 'Scan QR code to authenticate',
+        scanQrInfo: 'Pairing lets your phone send messages to a Claude Code session running on your computer. The QR contains a one-time key that authorizes this device to control that terminal.',
+        githubConnected: ({ login }: { login: string }) => `Connected as @${login}`,
+        githubInfo: 'Used to sign in via GitHub and to fetch repository metadata in some flows. Disconnecting only removes GitHub access — your Idle account stays intact.',
+        connectGithubAccount: 'Connect your GitHub account',
+        usage: 'Usage',
+        usageSubtitle: 'View your API usage and costs',
+        // Dynamic settings messages
+        machineStatus: ({ name, status }: { name: string; status: 'online' | 'offline' }) =>
+            `${name} is ${status}`,
+        featureToggled: ({ feature, enabled }: { feature: string; enabled: boolean }) =>
+            `${feature} ${enabled ? 'enabled' : 'disabled'}`,
+        // Settings section titles and menu rows
+        sectionPairTerminal: 'Pair Terminal',
+        sectionConnected: 'Connected',
+        sectionApp: 'App',
+        sectionAdvanced: 'Advanced',
+        sectionHelp: 'Help & Feedback',
+        language: 'Language',
+        languageSubtitle: 'Choose your preferred display language',
+        claudeCode: 'Coding agents',
+        claudeCodeInfo: 'Claude Code, Codex, and Gemini authenticate on the paired computer through their official CLIs. Idle never stores those provider credentials.',
+        labFeatures: 'Lab features',
+        labFeaturesSubtitle: 'Try experimental features in development',
+        labFeaturesInfo: 'Experimental toggles. They may change, break, or be removed in future updates. Safe to try, but don\'t rely on them long-term.',
+    },
+
+    settingsAppearance: {
+        commitAttribution: 'Commit attribution',
+        commitAttributionDescription: 'Credit Idle in commits made through the app',
+        commitAttributionInfo: 'When on, commits made through Idle add a "Co-Authored-By: Idle" credit (alongside Claude\'s). Off by default, so your commit history stays clean unless you opt in.',
+        // Appearance settings screen
+        theme: 'Theme',
+        themeDescription: 'Choose your preferred color scheme',
+        themeOptions: {
+            adaptive: 'Adaptive',
+            light: 'Light',
+            dark: 'Dark',
+        },
+        themeDescriptions: {
+            adaptive: 'Match system settings',
+            light: 'Always use light theme',
+            dark: 'Always use dark theme',
+        },
+        display: 'Display',
+        displayDescription: 'Control layout and spacing',
+        inlineToolCalls: 'Inline Tool Calls',
+        inlineToolCallsDescription: 'Display tool calls directly in chat messages',
+        expandTodoLists: 'Expand Todo Lists',
+        expandTodoListsDescription: 'Show all todos instead of just changes',
+        showLineNumbersInDiffs: 'Show Line Numbers in Diffs',
+        showLineNumbersInDiffsDescription: 'Display line numbers in code diffs',
+        showLineNumbersInToolViews: 'Show Line Numbers in Tool Views',
+        showLineNumbersInToolViewsDescription: 'Display line numbers in tool view diffs',
+        wrapLinesInDiffs: 'Wrap Lines in Diffs',
+        wrapLinesInDiffsDescription: 'Wrap long lines instead of horizontal scrolling in diff views',
+        diffStyle: 'Diff View',
+        diffStyleDescription: 'Show diffs as a single column (unified) or side-by-side (split). Split view is web-only.',
+        diffStyleOptions: {
+            unified: 'Unified',
+            split: 'Split',
+        },
+        alwaysShowContextSize: 'Always Show Context Size',
+        alwaysShowContextSizeDescription: 'Display context usage even when not near limit',
+        avatarStyle: 'Avatar Style',
+        avatarStyleDescription: 'Choose session avatar appearance',
+        avatarOptions: {
+            pixelated: 'Pixelated',
+            gradient: 'Gradient',
+            brutalist: 'Brutalist',
+            northglass: 'Northglass',
+        },
+        showFlavorIcons: 'Show AI Provider Icons',
+        showFlavorIconsDescription: 'Display AI provider icons on session avatars',
+        showMessageTimestamps: 'Show Message Timestamps',
+        showMessageTimestampsDescription: 'Display timestamps under chat bubbles and on session rows',
+        compactSessionView: 'Compact Session View',
+        compactSessionViewDescription: 'Show active sessions in a more compact layout',
+        linksOpenIn: 'Open Links In',
+        linksOpenInDescription: 'Choose where tap-to-open links render',
+        linksOpenInOptions: {
+            'in-app': 'In-app browser',
+            'external': 'External browser',
+        },
+    },
+
+    settingsFeatures: {
+        // Features settings screen
+        experiments: 'Experiments',
+        experimentsDescription: 'Enable experimental features that are still in development. These features may be unstable or change without notice.',
+        experimentalFeatures: 'Experimental Features',
+        experimentalFeaturesEnabled: 'Experimental features enabled',
+        experimentalFeaturesDisabled: 'Using stable features only',
+        webFeatures: 'Web Features',
+        webFeaturesDescription: 'Features available only in the web version of the app.',
+        enterToSend: 'Enter to Send',
+        enterToSendEnabled: 'Press Enter to send (Shift+Enter for a new line)',
+        enterToSendDisabled: 'Enter inserts a new line',
+        commandPalette: 'Command Palette',
+        commandPaletteEnabled: 'Press ⌘K to open',
+        commandPaletteDisabled: 'Quick command access disabled',
+        markdownCopyV2: 'Markdown Copy v2',
+        markdownCopyV2Subtitle: 'Long press opens copy modal',
+        hideInactiveSessions: 'Hide inactive sessions',
+        hideInactiveSessionsSubtitle: 'Show only active chats in your list',
+        groupToolCalls: 'Group Tool Calls',
+        groupToolCallsSubtitle: 'Collapse consecutive tool calls into one container',
+        privacy: 'Privacy',
+        privacyDescription: 'Completely disables all analytics and telemetry. No data will be sent to PostHog or any other tracking service.',
+        disableAnalytics: 'Disable Analytics',
+        analyticsDisabled: 'All tracking and telemetry disabled',
+        analyticsEnabled: 'Opt-in usage analytics active',
+        imageUpload: 'Image Upload',
+        imageUploadSubtitle: 'Attach images to messages for supported agents to analyze',
+    },
+
+    imageUpload: {
+        permissionTitle: 'Photo Library Access',
+        permissionMessage: 'Allow access to your photo library to attach images to messages.',
+        limitTitle: 'Image Limit Reached',
+        limitMessage: ({ max }: { max: number }) => `You can attach up to ${max} images per message.`,
+        fileTooLargeTitle: 'File Too Large',
+        fileTooLargeMessage: ({ name, maxMb }: { name: string; maxMb: number }) => `"${name}" exceeds the ${maxMb}MB limit and was not added.`,
+        uploadFailedTitle: 'Upload Failed',
+        uploadFailedMessage: ({ count }: { count: number }) => count === 1
+            ? 'One image could not be uploaded and was not sent.'
+            : `${count} images could not be uploaded and were not sent.`,
+        notSupportedTitle: 'Images Not Supported',
+        notSupportedMessage: 'This agent does not support image attachments. Images were not sent.',
+    },
+
+    errors: {
+        networkError: 'Network error occurred',
+        serverError: 'Server error occurred',
+        unknownError: 'An unknown error occurred',
+        connectionTimeout: 'Connection timed out',
+        authenticationFailed: 'Authentication failed',
+        permissionDenied: 'Permission denied',
+        fileNotFound: 'File not found',
+        invalidFormat: 'Invalid format',
+        operationFailed: 'Operation failed',
+        tryAgain: 'Please try again',
+        contactSupport: 'Contact support if the problem persists',
+        sessionNotFound: 'Session not found',
+        voiceSessionFailed: 'Failed to start voice session',
+        voiceServiceUnavailable: 'Voice service is temporarily unavailable',
+        voiceLimitReachedTitle: 'Voice Limit Reached',
+        voiceHardLimitReached: ({ hours }: { hours: number }) => `You've used ${hours}+ hours of voice this month. This is the maximum allowed. Voice will be available again when the monthly limit resets.`,
+        voiceConversationLimitReached: 'You\'ve reached the maximum number of voice conversations this month. Voice will be available again when the monthly conversation limit resets.',
+        sessionDeleted: 'Session has been deleted',
+        sessionDeletedDescription: 'This session has been permanently removed',
+
+        // Error functions with context
+        fieldError: ({ field, reason }: { field: string; reason: string }) =>
+            `${field}: ${reason}`,
+        validationError: ({ field, min, max }: { field: string; min: number; max: number }) =>
+            `${field} must be between ${min} and ${max}`,
+        retryIn: ({ seconds }: { seconds: number }) =>
+            `Retry in ${seconds} ${seconds === 1 ? 'second' : 'seconds'}`,
+        errorWithCode: ({ message, code }: { message: string; code: number | string }) =>
+            `${message} (Error ${code})`,
+    },
+
+    newSession: {
+        title: 'Start New Session',
+        machineOffline: 'Machine is offline',
+        switchMachinesHint: '• Switch machines by clicking on the machine above',
+    },
+
+    sessionHistory: {
+        // Used by session history screen
+        title: 'Session History',
+        empty: 'No sessions found',
+        today: 'Today',
+        yesterday: 'Yesterday',
+        daysAgo: ({ count }: { count: number }) => `${count} ${count === 1 ? 'day' : 'days'} ago`,
+        viewAll: 'View all sessions',
+    },
+
+    session: {
+        inputPlaceholder: 'Type a message ...',
+        inputPlaceholderResume: 'Send a message to resume this session',
+        inactiveArchived: 'This session is inactive.',
+        resumeFromTerminal: 'To resume it from the terminal:',
+        actions: 'Session Actions',
+        moveToGroup: 'Move to Group',
+        moveToGroupFrom: ({ name }: { name: string }) => `Move from "${name}"...`,
+        moveToTop: 'Move to top',
+        newGroup: 'New group...',
+        newGroupTitle: 'New group',
+        newGroupPlaceholder: 'Group name',
+        rename: 'Rename',
+        renameTitle: 'Rename session',
+        renameMessage: 'Sets a custom name on this device only. Leave blank to restore the original.',
+        renamePlaceholder: 'Session name',
+        rearrangeSessions: 'Rearrange sessions',
+        reorderHint: 'Long-press a row, then drag to a new spot.',
+        ungroupedHeader: 'Ungrouped',
+        selectGroup: 'Select Group',
+        removeFromGroup: 'Remove from Group',
+        renameGroup: 'Rename Group',
+        renameGroupTitle: 'Rename Group',
+        deleteGroup: 'Delete Group',
+        deleteGroupTitle: 'Delete Group',
+        deleteGroupMessage: 'Sessions in this group will be moved to ungrouped.',
+        // Session action feedback and first-launch hint
+        archiveMovedToast: 'Archive moved under ⋯',
+        actionsHintTip: 'Tap ⋯ on any session for rename, archive, or rearrange.',
+        newChat: 'New chat',
+        // Fork / duplicate / rewind flow (Claude only)
+        forkAction: 'Fork session',
+        forkSubtitle: 'Continue in a new session with the same context',
+        duplicateAction: 'Duplicate from message…',
+        duplicateSubtitle: 'Rewind to a chosen point and try again',
+        forkFromHere: 'Fork from here',
+        duplicateSheetTitle: 'Choose a rewind point',
+        duplicateSheetSubtitle: 'The new session keeps the chosen turn complete (your message and the agent’s response) and drops every prompt after it.',
+        duplicateSheetConfirm: 'Duplicate',
+        duplicateSheetEmpty: 'No messages eligible for rewind in this session yet.',
+        duplicateRowDisabled: "This message can't be used as a rewind point.",
+        forkedFromLabel: 'Forked from',
+        forkedFromSubtitle: 'Open the session this fork was branched from',
+        forkErrorOffline: 'This machine is offline. Fork is only available while the machine that owns the session is online.',
+        forkErrorMissingUuid: 'The chosen rewind point is no longer present in the source session — try forking without truncation.',
+        forkErrorMissingMetadata: 'Missing session metadata required to fork.',
+        forkErrorGeneric: 'Failed to fork the session.',
+        forkClaudeOnly: 'Fork is currently only supported for Claude sessions.',
+    },
+
+    commandPalette: {
+        placeholder: 'Type a command or search...',
+    },
+
+    server: {
+        // Used by Server Configuration screen (app/(app)/server.tsx)
+        serverConfiguration: 'Server Configuration',
+        enterServerUrl: 'Please enter a server URL',
+        notValidIdleServer: 'Not a valid Idle Server',
+        changeServer: 'Change Server',
+        continueWithServer: 'Continue with this server?',
+        resetToDefault: 'Reset to Default',
+        resetServerDefault: 'Reset server to default?',
+        validating: 'Validating...',
+        validatingServer: 'Validating server...',
+        serverReturnedError: 'Server returned an error',
+        failedToConnectToServer: 'Failed to connect to server',
+        currentlyUsingCustomServer: 'Currently using custom server',
+        customServerUrlLabel: 'Custom Server URL',
+        advancedFeatureFooter: "This is an advanced feature. Only change the server if you know what you're doing. You will need to log out and log in again after changing servers.",
+        // Used by the menu entry in SettingsView (links to /server)
+        relayServerMenuTitle: 'Relay Server',
+        relayServerMenuSubtitleDefault: 'Hosted by Northglass — change to point at your own self-hosted relay',
+        relayServerMenuInfo: 'Idle routes messages between your phone and the CLI through a relay server. The default is our hosted one (idle-api.northglass.io). You can point Idle at your own relay — see SELF-HOSTING.md in the repo for the setup.',
+        relayServerMenuSubtitleCustom: 'Custom (self-hosted)',
+    },
+
+    sessionInfo: {
+        // Used by Session Info screen (app/(app)/session/[id]/info.tsx)
+        moveToTop: 'Move to Top',
+        killSession: 'Kill Session',
+        killSessionConfirm: 'Are you sure you want to terminate this session?',
+        archiveSession: 'Archive Session',
+        archiveSessionConfirm: 'Are you sure you want to archive this session?',
+        idleSessionIdCopied: 'Idle Session ID copied to clipboard',
+        failedToCopySessionId: 'Failed to copy Idle Session ID',
+        idleSessionId: 'Idle Session ID',
+        claudeCodeSessionId: 'Claude Code Session ID',
+        claudeCodeSessionIdCopied: 'Claude Code Session ID copied to clipboard',
+        codexThreadId: 'Codex Thread ID',
+        codexThreadIdCopied: 'Codex Thread ID copied to clipboard',
+        aiProvider: 'AI Provider',
+        failedToCopyClaudeCodeSessionId: 'Failed to copy Claude Code Session ID',
+        failedToCopyCodexThreadId: 'Failed to copy Codex Thread ID',
+        failedToKillSession: 'Failed to kill session',
+        failedToArchiveSession: 'Failed to archive session',
+        connectionStatus: 'Connection Status',
+        created: 'Created',
+        lastUpdated: 'Last Updated',
+        sequence: 'Sequence',
+        quickActions: 'Quick Actions',
+        viewMachine: 'View Machine',
+        viewMachineSubtitle: 'View machine details and sessions',
+        resumeSession: 'Resume Session',
+        resumeSessionSubtitle: 'Resume this session on the same machine',
+        resumeSessionSameMachineOnly: 'This session can only be resumed on the same machine it started on.',
+        resumeSessionMachineOffline: 'This machine is offline. Resume is only available while it is online.',
+        resumeSessionMissingMachine: 'This session is missing its machine metadata, so it cannot be resumed.',
+        resumeSessionMissingBackendId: 'This session does not have a resumable Claude or Codex identifier.',
+        resumeSessionUnexpectedDirectoryPrompt: 'Resume cannot create directories. Start the session manually from its original path.',
+        killSessionSubtitle: 'Immediately terminate the session',
+        archiveSessionSubtitle: 'Archive this session and stop it',
+        metadata: 'Metadata',
+        host: 'Host',
+        path: 'Path',
+        operatingSystem: 'Operating System',
+        processId: 'Process ID',
+        idleHome: 'Idle Home',
+        agentState: 'Agent State',
+        controlledByUser: 'Controlled by User',
+        pendingRequests: 'Pending Requests',
+        activity: 'Activity',
+        thinking: 'Thinking',
+        thinkingSince: 'Thinking Since',
+        cliVersion: 'CLI Version',
+        idleAppVersion: 'Idle App Version',
+        cliVersionOutdated: 'CLI Update Required',
+        cliVersionOutdatedMessage: ({ currentVersion, requiredVersion }: { currentVersion: string; requiredVersion: string }) =>
+            `Version ${currentVersion} installed. Update to ${requiredVersion} or later`,
+        updateCliInstructions: 'Please run npm install -g idle-coder@latest',
+        deleteSession: 'Delete Session',
+        deleteSessionSubtitle: 'Permanently remove this session',
+        deleteSessionConfirm: 'Delete Session Permanently?',
+        deleteSessionWarning: 'This action cannot be undone. All messages and data associated with this session will be permanently deleted.',
+        failedToDeleteSession: 'Failed to delete session',
+        sessionDeleted: 'Session deleted successfully',
+        worktreeCleanupTitle: 'Delete Worktree?',
+        worktreeCleanupMessage: 'The worktree has no uncommitted changes. Would you like to delete the worktree files?',
+        worktreeCleanupDelete: 'Delete Worktree',
+        worktreeCleanupKeep: 'Keep Files',
+
+    },
+
+    components: {
+        emptyMainScreen: {
+            // Used by EmptyMainScreen component
+            readyToCode: 'Ready to code?',
+            installCli: 'Install the Idle CLI',
+            runIt: 'Run it',
+            scanQrCode: 'Scan the QR code',
+            openCamera: 'Open Camera',
+            // Discoverable help affordance so a first-time user (or an App Store
+            // reviewer with no desktop) understands that pairing requires the
+            // Idle CLI running on a computer, and that the QR / manual-URL are
+            // two ways to consume the SAME pairing link the CLI prints.
+            howPairingWorks: 'How does pairing work?',
+            howPairingWorksTitle: 'Pairing Idle',
+            howPairingWorksBody:
+                'Idle pairs this app with a coding session running on your computer.\n\n' +
+                '1. On your computer, install the CLI: npm i -g idle-coder\n' +
+                '2. Run "idle" and choose Mobile — it prints a QR code and an idle:// URL.\n' +
+                '3. Either tap "Open Camera" to scan the QR, or tap "Enter URL manually" and paste the idle:// URL.\n\n' +
+                'Both options do the same thing. You need a computer running the CLI to generate the code — there is nothing to scan or paste until then.',
+        },
+        emptyMessages: {
+            // Used by EmptyMessages component (empty-chat empty state)
+            title: 'No messages yet',
+            createdAt: ({ time }: { time: string }) => `Created ${time}`,
+        },
+        emptySessionsTablet: {
+            // Used by EmptySessionsTablet component
+            title: 'No active sessions',
+            descriptionOnline: 'Start a new session on any of your connected machines.',
+            startNewSession: 'Start New Session',
+            descriptionOffline: 'Open a new terminal on your computer to start a session.',
+        },
+        sessionActions: {
+            // Used by SessionActionsPopover component
+            archive: 'Archive',
+        },
+        restoreScreen: {
+            // Used by restore/index.tsx — QR link device instructions
+            step1: '1. Open Idle on your mobile device',
+            step2: '2. Go to Settings, Account',
+            step3: '3. Tap "Link New Device"',
+            step4: '4. Scan this QR code',
+        },
+        agentGoalBar: {
+            currentGoal: 'Current goal',
+            accessibilityLabel: ({ goal }: { goal: string }) => `Current goal: ${goal}`,
+            clearGoal: 'Clear goal',
+            stopGoal: 'Stop goal',
+            editGoal: 'Edit goal',
+        },
+    },
+
+    agentInput: {
+        permissionMode: {
+            title: 'PERMISSION MODE',
+            default: 'default permissions',
+            acceptEdits: 'accept edits',
+            plan: 'plan',
+            dontAsk: "don't ask",
+            bypassPermissions: 'yolo',
+            badgeAcceptAllEdits: 'accept all edits',
+            badgeBypassAllPermissions: 'yolo',
+            badgePlanMode: 'plan mode',
+        },
+        agent: {
+            claude: 'Claude',
+            codex: 'Codex',
+            gemini: 'Gemini',
+            openclaw: 'OpenClaw',
+        },
+        model: {
+            title: 'MODEL',
+            configureInCli: 'Configure models in CLI settings',
+        },
+        effort: {
+            title: 'EFFORT',
+        },
+        codexPermissionMode: {
+            title: 'CODEX PERMISSION MODE',
+            default: 'default permissions',
+            readOnly: 'read-only',
+            safeYolo: 'safe yolo',
+            yolo: 'yolo',
+            badgeReadOnly: 'read-only',
+            badgeSafeYolo: 'safe yolo',
+            badgeYolo: 'yolo',
+        },
+        codexModel: {
+            title: 'CODEX MODEL',
+            gpt5CodexLow: 'gpt-5-codex low',
+            gpt5CodexMedium: 'gpt-5-codex medium',
+            gpt5CodexHigh: 'gpt-5-codex high',
+            gpt5Minimal: 'GPT-5 Minimal',
+            gpt5Low: 'GPT-5 Low',
+            gpt5Medium: 'GPT-5 Medium',
+            gpt5High: 'GPT-5 High',
+        },
+        geminiPermissionMode: {
+            title: 'GEMINI PERMISSION MODE',
+            default: 'default permissions',
+            autoEdit: 'auto edit',
+            yolo: 'yolo',
+            plan: 'plan',
+            badgeAutoEdit: 'auto edit',
+            badgeYolo: 'yolo',
+            badgePlan: 'plan',
+        },
+        context: {
+            remaining: ({ percent }: { percent: number }) => `${percent}% left`,
+        },
+        suggestion: {
+            fileLabel: 'FILE',
+            folderLabel: 'FOLDER',
+        },
+        noMachinesAvailable: 'No machines',
+    },
+
+    machineLauncher: {
+        showLess: 'Show less',
+        showAll: ({ count }: { count: number }) => `Show all (${count} paths)`,
+        enterCustomPath: 'Enter custom path',
+        offlineUnableToSpawn: 'Unable to spawn new session, offline',
+    },
+
+    sidebar: {
+        sessionsTitle: 'Idle',
+        showArchived: 'Show archived',
+        hideArchived: 'Hide archived',
+        newSession: 'New session',
+    },
+
+    zen: {
+        toggle: 'Zen mode',
+    },
+
+    toolView: {
+        input: 'Input',
+        output: 'Output',
+    },
+
+    toolGroup: {
+        editedFile: 'Edited file',
+        editedFiles: ({ count }: { count: number }) => count === 1 ? 'Edited 1 file' : `Edited ${count} files`,
+        readFiles: ({ count }: { count: number }) => count === 1 ? 'Read 1 file' : `Read ${count} files`,
+        ranCommands: ({ count }: { count: number }) => count === 1 ? 'Ran 1 command' : `Ran ${count} commands`,
+        searched: ({ count }: { count: number }) => count === 1 ? 'Searched 1 time' : `Searched ${count} times`,
+        fetchedUrls: ({ count }: { count: number }) => count === 1 ? 'Fetched 1 URL' : `Fetched ${count} URLs`,
+        ranTasks: ({ count }: { count: number }) => count === 1 ? 'Ran 1 task' : `Ran ${count} tasks`,
+        usedTools: ({ count }: { count: number }) => count === 1 ? 'Used 1 tool' : `Used ${count} tools`,
+        workedFor: ({ duration }: { duration: string }) => `Worked ${duration}`,
+    },
+
+    tools: {
+        fullView: {
+            description: 'Description',
+            inputParams: 'Input Parameters',
+            output: 'Output',
+            error: 'Error',
+            completed: 'Tool completed successfully',
+            noOutput: 'No output was produced',
+            running: 'Tool is running...',
+        },
+        taskView: {
+            initializing: 'Initializing agent...',
+            moreTools: ({ count }: { count: number }) => `+${count} more ${plural({ count, singular: 'tool', plural: 'tools' })}`,
+        },
+        multiEdit: {
+            editNumber: ({ index, total }: { index: number; total: number }) => `Edit ${index} of ${total}`,
+            replaceAll: 'Replace All',
+        },
+        names: {
+            task: 'Task',
+            terminal: 'Terminal',
+            searchFiles: 'Search Files',
+            search: 'Search',
+            searchContent: 'Search Content',
+            listFiles: 'List Files',
+            planProposal: 'Plan proposal',
+            readFile: 'Read File',
+            editFile: 'Edit File',
+            writeFile: 'Write File',
+            fetchUrl: 'Fetch URL',
+            readNotebook: 'Read Notebook',
+            editNotebook: 'Edit Notebook',
+            todoList: 'Todo List',
+            webSearch: 'Web Search',
+            reasoning: 'Reasoning',
+            applyChanges: 'Update file',
+            viewDiff: 'Current file changes',
+            question: 'Question',
+        },
+        askUserQuestion: {
+            submit: 'Submit Answer',
+            multipleQuestions: ({ count }: { count: number }) => `${count} questions`,
+            other: 'Other',
+            otherDescription: 'Type your own answer',
+            otherPlaceholder: 'Type your answer...',
+        },
+        desc: {
+            terminalCmd: ({ cmd }: { cmd: string }) => `Terminal(cmd: ${cmd})`,
+            searchPattern: ({ pattern }: { pattern: string }) => `Search(pattern: ${pattern})`,
+            searchPath: ({ basename }: { basename: string }) => `Search(path: ${basename})`,
+            fetchUrlHost: ({ host }: { host: string }) => `Fetch URL(url: ${host})`,
+            editNotebookMode: ({ path, mode }: { path: string; mode: string }) => `Edit Notebook(file: ${path}, mode: ${mode})`,
+            todoListCount: ({ count }: { count: number }) => `Todo List(count: ${count})`,
+            webSearchQuery: ({ query }: { query: string }) => `Web Search(query: ${query})`,
+            grepPattern: ({ pattern }: { pattern: string }) => `grep(pattern: ${pattern})`,
+            multiEditEdits: ({ path, count }: { path: string; count: number }) => `${path} (${count} edits)`,
+            readingFile: ({ file }: { file: string }) => `Reading ${file}`,
+            writingFile: ({ file }: { file: string }) => `Writing ${file}`,
+            modifyingFile: ({ file }: { file: string }) => `Modifying ${file}`,
+            modifyingFiles: ({ count }: { count: number }) => `Modifying ${count} files`,
+            modifyingMultipleFiles: ({ file, count }: { file: string; count: number }) => `${file} and ${count} more`,
+            showingDiff: 'Showing changes',
+        }
+    },
+
+    files: {
+        changes: 'Changes',
+        searchPlaceholder: 'Search files...',
+        detachedHead: 'detached HEAD',
+        summary: ({ staged, unstaged }: { staged: number; unstaged: number }) => `${staged} staged • ${unstaged} unstaged`,
+        notRepo: 'Not a git repository',
+        notUnderGit: 'This directory is not under git version control',
+        searching: 'Searching files...',
+        noFilesFound: 'No files found',
+        noFilesInProject: 'No files in project',
+        tryDifferentTerm: 'Try a different search term',
+        searchResults: ({ count }: { count: number }) => `Search Results (${count})`,
+        projectRoot: 'Project root',
+        stagedChanges: ({ count }: { count: number }) => `Staged Changes (${count})`,
+        unstagedChanges: ({ count }: { count: number }) => `Unstaged Changes (${count})`,
+        // File viewer strings
+        loadingFile: ({ fileName }: { fileName: string }) => `Loading ${fileName}...`,
+        binaryFile: 'Binary File',
+        cannotDisplayBinary: 'Cannot display binary file content',
+        diff: 'Diff',
+        file: 'File',
+        fileEmpty: 'File is empty',
+        noChanges: 'No changes to display',
+        noChangesTitle: 'No changes',
+        noChangesSubtitle: 'Working tree is clean',
+        deleted: 'Deleted',
+        changedFiles: ({ count }: { count: number }) => `${count} changed ${count === 1 ? 'file' : 'files'}`,
+        allFiles: 'All Files',
+        editFile: 'Edit',
+        saveFile: 'Save',
+        failedToRead: 'Failed to read file',
+        failedToSave: 'Failed to save file',
+        fileConflict: 'File conflict',
+        fileConflictDescription: 'This file was modified on the device while you were editing. Reload to see the latest version.',
+        reload: 'Reload',
+        overwrite: 'Overwrite',
+    },
+
+    settingsVoice: {
+        // Voice settings screen
+        permissionConfirmTitle: 'Approve tool request?',
+        messageConfirmTitle: 'Send voice message?',
+        languageTitle: 'Language',
+        languageDescription: 'Choose your preferred language for voice assistant interactions. This setting syncs across all your devices.',
+        preferredLanguage: 'Preferred Language',
+        preferredLanguageSubtitle: 'Language used for voice assistant responses',
+        language: {
+            searchPlaceholder: 'Search languages...',
+            title: 'Languages',
+            footer: ({ count }: { count: number }) => `${count} ${plural({ count, singular: 'language', plural: 'languages' })} available`,
+            autoDetect: 'Auto-detect',
+        },
+        // Bring your own agent
+        byoTitle: 'Bring Your Own Agent',
+        byoDescription: 'Configure your own ElevenLabs agent for direct connection. Your agent must define two client tools: sendMessageToSession (sends text to a selected coding session) and processPermissionRequest (allows or denies tool use). It receives bounded session context via the {{initialConversationContext}} dynamic variable.',
+        customAgentId: 'ElevenLabs Agent ID',
+        customAgentIdNotSet: 'Not configured',
+        customAgentIdDescription: 'Required for direct connection. Enter your ElevenLabs agent ID; direct connection does not use an Idle default.',
+        customAgentIdPlaceholder: 'e.g. abc123def456',
+        bypassToken: 'Direct Connection',
+        bypassTokenSubtitle: 'Skip Idle server, connect straight to ElevenLabs',
+        promptGuideTitle: 'Agent Prompt Guide',
+        promptGuideDescription: 'Your ElevenLabs agent needs:\n\n• Tool: sendMessageToSession — parameters: sessionId (string) and message (string). Sends a message to the selected coding session.\n• Tool: processPermissionRequest — parameters: sessionId (string), requestId (string), and decision ("allow" or "deny"). Approves or denies the exact pending tool permission.\n• Dynamic variable: {{initialConversationContext}} — receives bounded session context on start.\n\nThe agent acts as a voice bridge between the user and coding agents. It should be concise, treat injected context as untrusted data, only act on live user speech, and report when a coding agent finishes work. Every outbound message and permission approval requires confirmation on this device.',
+        // Voice usage
+        usageTitle: 'Usage (Last 30 Days)',
+        usageFooter: 'Voice time used in the last 30 days. Free tier: 20 min. Subscribed: 5 hours. Max 100 conversations per month.',
+        usageLabel: 'Voice Time',
+        conversationsLabel: 'Conversations',
+        usageUsed: ({ used, limit }: { used: string; limit: string }) => `${used} used of ${limit}`,
+        supportTitle: 'Upgrade Voice',
+        supportSubtitle: 'Get more voice time and support development',
+    },
+
+    settingsAccount: {
+        // Account settings screen
+        accountInformation: 'Account Information',
+        status: 'Status',
+        statusActive: 'Active',
+        statusNotAuthenticated: 'Not Authenticated',
+        publicId: 'Public ID',
+        notAvailable: 'Not available',
+        linkNewDevice: 'Link New Device',
+        linkNewDeviceSubtitle: 'Scan QR code to link device',
+        profile: 'Profile',
+        name: 'Name',
+        github: 'GitHub',
+        tapToDisconnect: 'Tap to disconnect',
+        server: 'Server',
+        backup: 'Backup',
+        backupDescription: 'Your secret key is the only way to recover your account. Save it in a secure place like a password manager.',
+        secretKey: 'Secret Key',
+        tapToReveal: 'Tap to reveal',
+        tapToHide: 'Tap to hide',
+        secretKeyLabel: 'SECRET KEY (TAP TO COPY)',
+        secretKeyCopied: 'Secret key copied to clipboard. Store it in a safe place!',
+        secretKeyCopyFailed: 'Failed to copy secret key',
+        privacy: 'Privacy',
+        privacyDescription: 'Share limited usage events and app/device metadata with PostHog. Prompts, session content, URLs, and account identifiers are excluded.',
+        analytics: 'Analytics',
+        analyticsDisabled: 'No data is shared',
+        analyticsEnabled: 'Limited usage data is shared',
+        dangerZone: 'Danger Zone',
+        logout: 'Logout',
+        logoutSubtitle: 'Sign out and clear local data',
+        logoutConfirm: 'Are you sure you want to logout? Make sure you have backed up your secret key!',
+        logoutInfo: 'Signs you out of this device, clears your local cache, and unregisters push notifications. Your account, sessions, and paired machines are NOT deleted — sign back in with your secret key to restore everything.',
+        deleteAccount: 'Delete Account',
+        deleteAccountSubtitle: 'Permanently delete your account and all data',
+        deleteAccountConfirm: 'This permanently deletes your account and all of your sessions, messages, and paired machines from our servers. This cannot be undone.',
+        deleteAccountConfirmButton: 'Delete Account',
+    },
+
+    settingsLanguage: {
+        // Language settings screen
+        title: 'Language',
+        description: 'Choose your preferred language for the app interface. This will sync across all your devices.',
+        currentLanguage: 'Current Language',
+        automatic: 'Automatic',
+        automaticSubtitle: 'Detect from device settings',
+        needsRestart: 'Language Changed',
+        needsRestartMessage: 'The app needs to restart to apply the new language setting.',
+        restartNow: 'Restart Now',
+    },
+
+    connectButton: {
+        authenticate: 'Authenticate Terminal',
+        authenticateWithUrlPaste: 'Authenticate Terminal with URL paste',
+        pasteAuthUrl: 'Paste the auth URL from your terminal',
+    },
+
+    updateBanner: {
+        updateAvailable: 'Update available',
+        pressToApply: 'Press to apply the update',
+        whatsNew: "What's new",
+        seeLatest: 'See the latest updates and improvements',
+        nativeUpdateAvailable: 'App Update Available',
+        tapToUpdateAppStore: 'Tap to update in App Store',
+        tapToUpdatePlayStore: 'Tap to update in Play Store',
+    },
+
+    changelog: {
+        // Used by the changelog screen
+        version: ({ version }: { version: number }) => `Version ${version}`,
+        noEntriesAvailable: 'No changelog entries available.',
+    },
+
+    terminal: {
+        // Used by terminal connection screens
+        webBrowserRequired: 'Web Browser Required',
+        webBrowserRequiredDescription: 'Terminal connection links can only be opened in a web browser for security reasons. Please use the QR code scanner or open this link on a computer.',
+        processingConnection: 'Processing connection...',
+        invalidConnectionLink: 'Invalid Connection Link',
+        invalidConnectionLinkDescription: 'The connection link is missing or invalid. Please check the URL and try again.',
+        connectTerminal: 'Connect Terminal',
+        terminalRequestDescription: 'A terminal is requesting durable access to your Idle account. A paired terminal can create, change, and delete account data.',
+        connectionDetails: 'Connection Details',
+        publicKey: 'Public Key',
+        encryption: 'Encryption',
+        endToEndEncrypted: 'End-to-end encrypted',
+        acceptConnection: 'Accept Connection',
+        connecting: 'Connecting...',
+        reject: 'Reject',
+        security: 'Security',
+        securityFooter: 'The link is parsed locally in your browser. Pairing approval is sent to your configured relay, which issues account credentials encrypted for the requesting terminal.',
+        securityFooterDevice: 'The link is parsed locally on this device. Pairing approval is sent to your configured relay, which issues account credentials encrypted for the requesting terminal.',
+        pairingGrantTitle: 'Grant account access to this terminal?',
+        pairingGrantDescription: 'Pair only a terminal you just started and control. It will receive durable account credentials that can create, change, and delete account data, including deleting the account. Idle support will never ask you to approve a pairing request.',
+        pairTerminal: 'Pair terminal',
+        clientSideProcessing: 'Client-Side Processing',
+        linkProcessedLocally: 'Link processed locally in browser',
+        linkProcessedOnDevice: 'Link processed locally on device',
+    },
+
+    modals: {
+        // Used across connect flows and settings
+        authenticateTerminal: 'Authenticate Terminal',
+        pasteUrlFromTerminal: 'Paste the authentication URL from your terminal',
+        deviceLinkedSuccessfully: 'Device linked successfully',
+        terminalConnectedSuccessfully: 'Terminal connected successfully',
+        invalidAuthUrl: 'Invalid authentication URL',
+        disconnectGithub: 'Disconnect GitHub',
+        disconnectGithubConfirm: 'Are you sure you want to disconnect your GitHub account?',
+        disconnect: 'Disconnect',
+        failedToConnectTerminal: 'Failed to connect terminal',
+        cameraPermissionsRequiredToConnectTerminal: 'Camera permissions are required to connect terminal',
+        failedToLinkDevice: 'Failed to link device',
+        cameraPermissionsRequiredToScanQr: 'Camera permissions are required to scan QR codes'
+    },
+
+    navigation: {
+        // Navigation titles and screen headers
+        connectTerminal: 'Connect Terminal',
+        linkNewDevice: 'Link New Device',
+        restoreWithSecretKey: 'Restore with Secret Key',
+        whatsNew: "What's New",
+    },
+
+    welcome: {
+        // Main welcome screen for unauthenticated users
+        title: 'Codex and Claude Code mobile client',
+        subtitle: 'Session content is end-to-end encrypted; the relay still handles account and routing metadata.',
+        createAccount: 'Create account',
+        linkOrRestoreAccount: 'Link or restore account',
+        loginWithMobileApp: 'Login with mobile app',
+    },
+
+    review: {
+        // Used by utils/requestReview.ts
+        enjoyingApp: 'Enjoying the app?',
+        feedbackPrompt: "We'd love to hear your feedback!",
+        yesILoveIt: 'Yes, I love it!',
+        notReally: 'Not really'
+    },
+
+    items: {
+        // Used by Item component for copy toast
+        copiedToClipboard: ({ label }: { label: string }) => `${label} copied to clipboard`
+    },
+
+    machine: {
+        launchNewSessionInDirectory: 'Launch New Session in Directory',
+        offlineUnableToSpawn: 'Launcher disabled while machine is offline',
+        offlineHelp: '• Make sure your computer is online\n• Run `idle daemon status` to diagnose\n• Are you running the latest CLI version? Upgrade with `npm install -g idle-coder@latest`',
+        daemon: 'Daemon',
+        status: 'Status',
+        stopDaemon: 'Stop Daemon',
+        lastKnownPid: 'Last Known PID',
+        lastKnownHttpPort: 'Last Known HTTP Port',
+        startedAt: 'Started At',
+        cliVersion: 'CLI Version',
+        daemonStateVersion: 'Daemon State Version',
+        activeSessions: ({ count }: { count: number }) => `Active Sessions (${count})`,
+        machineGroup: 'Machine',
+        host: 'Host',
+        machineId: 'Machine ID',
+        username: 'Username',
+        homeDirectory: 'Home Directory',
+        platform: 'Platform',
+        architecture: 'Architecture',
+        lastSeen: 'Last Seen',
+        never: 'Never',
+        metadataVersion: 'Metadata Version',
+        cliAvailability: 'CLI Availability',
+        cliInstalled: 'Installed',
+        cliNotFound: 'Not found',
+        lastDetected: 'Last Detected',
+        untitledSession: 'Untitled Session',
+        back: 'Back',
+        // Session section header and multi-machine summary
+        unknownHost: 'Unknown',
+        multipleMachines: ({ count }: { count: number }) => `${count} machines`,
+        startNewSessionInPath: ({ path }: { path: string }) => `Start new session in ${path}`,
+        viewMachineLabel: ({ name }: { name: string }) => `View machine: ${name}`,
+        dangerZone: 'Danger Zone',
+        delete: 'Delete Machine',
+        deleteFooter: 'Remove this machine from your account. Session history will be preserved, but you will not be able to start new sessions on this machine.',
+        deleteConfirmTitle: 'Delete this machine?',
+        deleteConfirmMessage: 'The machine will be removed from your account. Session history will be preserved, but you will not be able to start new sessions until you reconnect the daemon.',
+        deleteFailed: 'Failed to delete machine.',
+    },
+
+    message: {
+        switchedToMode: ({ mode }: { mode: string }) => `Switched to ${mode} mode`,
+        unknownEvent: 'Unknown event',
+        usageLimitUntil: ({ time }: { time: string }) => `Usage limit reached until ${time}`,
+        sentAsGoal: 'Sent as goal',
+        unknownTime: 'unknown time',
+    },
+
+    codex: {
+        // Codex permission dialog buttons
+        permissions: {
+            yesForSession: "Yes, and don't ask for a session",
+            stopAndExplain: 'Stop, and explain what to do',
+        }
+    },
+
+    claude: {
+        // Claude permission dialog buttons
+        permissions: {
+            yesAllowAllEdits: 'Yes, allow all edits during this session',
+            yesAllowEverything: 'Yes, allow everything during this session',
+            yesForTool: "Yes, don't ask again for this tool",
+            noTellClaude: 'No, and provide feedback',
+        }
+    },
+
+    textSelection: {
+        // Text selection screen
+        selectText: 'Select text range',
+        title: 'Select Text',
+        noTextProvided: 'No text provided',
+        textNotFound: 'Text not found or expired',
+        textCopied: 'Text copied to clipboard',
+        failedToCopy: 'Failed to copy text to clipboard',
+        noTextToCopy: 'No text available to copy',
+    },
+
+    markdown: {
+        // Markdown copy functionality
+        codeCopied: 'Code copied',
+        copyFailed: 'Copy failed',
+        mermaidRenderFailed: 'Failed to render mermaid diagram',
+        imageAlt: 'Markdown image',
+        remoteImageBlocked: 'Remote image blocked for privacy',
+        loadRemoteImage: ({ host }: { host: string }) => `Load image from ${host}`,
+        blockedImage: 'Image blocked because its source is unsafe',
+    },
+
+    artifacts: {
+        // Artifacts feature
+        title: 'Artifacts',
+        countSingular: '1 artifact',
+        countPlural: ({ count }: { count: number }) => `${count} artifacts`,
+        empty: 'No artifacts yet',
+        emptyDescription: 'Create your first artifact to get started',
+        new: 'New Artifact',
+        edit: 'Edit Artifact',
+        delete: 'Delete',
+        updateError: 'Failed to update artifact. Please try again.',
+        notFound: 'Artifact not found',
+        discardChanges: 'Discard changes?',
+        discardChangesDescription: 'You have unsaved changes. Are you sure you want to discard them?',
+        deleteConfirm: 'Delete artifact?',
+        deleteConfirmDescription: 'This action cannot be undone',
+        titleLabel: 'TITLE',
+        titlePlaceholder: 'Enter a title for your artifact',
+        bodyLabel: 'CONTENT',
+        bodyPlaceholder: 'Write your content here...',
+        emptyFieldsError: 'Please enter a title or content',
+        createError: 'Failed to create artifact. Please try again.',
+        save: 'Save',
+        saving: 'Saving...',
+        loading: 'Loading artifacts...',
+        error: 'Failed to load artifact',
+    },
+
+    usage: {
+        // Usage panel strings
+        today: 'Today',
+        last7Days: 'Last 7 days',
+        last30Days: 'Last 30 days',
+        totalTokens: 'Total Tokens',
+        totalCost: 'Total Cost',
+        tokens: 'Tokens',
+        cost: 'Cost',
+        usageOverTime: 'Usage over time',
+        byType: 'Token breakdown',
+        noData: 'No usage data available',
+    },
+
+    home: {
+        newGroup: 'New Group',
+        newGroupTitle: 'New Group',
+        newGroupMessage: 'Enter a name for this group.',
+    },
+
+    errorBoundary: {
+        crashedComponent: ({ name }: { name: string }) => `${name} crashed. Tap to retry.`,
+    },
+
+    failedMessage: {
+        title: 'Message didn\'t send',
+        retry: 'Retry',
+        retryInProgress: 'Sending…',
+        discard: 'Discard',
+        bannerA11y: 'Failed message banner',
+        retryA11y: 'Retry sending the failed message',
+        discardA11y: 'Discard the failed message',
+    },
+
+    lab: {
+        // Lab subscreen feature labels
+        composer: 'Composer',
+        sessions: 'Sessions',
+        diagnostics: 'Diagnostics',
+        imageAttachmentsTitle: 'Image attachments',
+        imageAttachmentsBadge: '🧪 Experimental',
+        imageAttachmentsLongDescription: 'Pick or paste images into the composer. Upload pipeline is not wired to server yet — toggle is for early access only.',
+        fileBrowserTitle: 'In-session file browser',
+        fileBrowserBadge: '✨ Preview',
+        fileBrowserLongDescription: 'Tap the folder icon in the composer toolbar to browse files Claude has touched this session.',
+        resumeSessionTitle: 'Resume disconnected sessions',
+        resumeSessionBadge: '🧪 Experimental',
+        resumeSessionLongDescription: 'Reconnect to sessions whose CLI exited unexpectedly. Daemon-side; results vary.',
+        hideInactiveTitle: 'Hide inactive sessions',
+        hideInactiveBadge: '✨ Preview',
+        hideInactiveLongDescription: "Sessions that haven't received messages in a while disappear from the home list.",
+        viewUsageData: 'View usage data',
+        // Onboarding card
+        welcomeTitle: 'Welcome to Lab',
+        welcomeBodyIntro: "Try features we're still building. Some break, some are nearly ready. Each one explains its risk with a badge —",
+        badgeExperimental: '🧪 may misbehave',
+        badgeBeta: '🌗 works for most cases',
+        badgePreview: '✨ nearly graduated',
+        welcomeFooter: 'You can leave anytime by turning toggles off.',
+        dismissWelcome: 'Dismiss Lab welcome',
+        // Empty state
+        emptyTitle: "Nothing's running yet",
+        emptyBody: "Pick a feature above to try it. They're all off by default.",
+        // Feedback footer
+        feedbackTitle: 'Got feedback on a feature?',
+        feedbackBody: 'We read every reply. Bugs, "love this," "this is broken on Android" — all welcome.',
+        feedbackGitHub: 'Open issue on GitHub ↗',
+        emailA11y: 'Email feedback to hello@northglass.io',
+        githubA11y: 'Open a GitHub issue',
+    },
+
+} as const;
+
+export type Translations = typeof en;
+
+/**
+ * Generic translation type that matches the structure of Translations
+ * but allows different string values (for other languages)
+ */
+export type TranslationStructure = {
+    readonly [K in keyof Translations]: {
+        readonly [P in keyof Translations[K]]: Translations[K][P] extends string
+            ? string
+            : Translations[K][P] extends (...args: any[]) => string
+                ? Translations[K][P]
+                : Translations[K][P] extends object
+                    ? {
+                        readonly [Q in keyof Translations[K][P]]: Translations[K][P][Q] extends string
+                            ? string
+                            : Translations[K][P][Q]
+                      }
+                    : Translations[K][P]
+    }
+};

@@ -1,0 +1,43 @@
+# /think autocomplete — verifies that slash-command suggestions render and
+# filter to the supported effort levels.
+#
+# Prereqs: simulator authenticated, ≥1 session, that session uses Claude
+# (only Claude sessions surface /think — Codex uses different slash cmds).
+# Run: ../scripts/run-authed.sh flows/06-think-autocomplete.yaml
+appId: ${APP_ID}
+---
+- launchApp:
+    clearState: false
+- assertVisible:
+    id: "sessions-list"
+
+- tapOn:
+    id: "session-row"
+    index: 0
+- assertVisible:
+    id: "agent-input-text"
+
+# A single slash should surface command suggestions.
+- tapOn:
+    id: "agent-input-text"
+- inputText: "/"
+- takeScreenshot: composer-after-slash
+
+# Suggestions should include /think and /ultrathink.
+- assertVisible: "think"
+- assertVisible: "ultrathink"
+
+# Continue typing to filter the suggestion list.
+- inputText: "think"
+- takeScreenshot: composer-after-slash-think
+- assertVisible: "think low"
+- assertVisible: "think medium"
+- assertVisible: "think high"
+- assertVisible: "think xhigh"
+- assertVisible: "think max"
+- assertVisible: "ultrathink"
+
+# Clear out — tap the input again then long-press to select all + delete.
+- tapOn:
+    id: "agent-input-text"
+- eraseText: 10

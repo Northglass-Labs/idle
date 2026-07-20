@@ -1,0 +1,151 @@
+name: npm publish (Trusted Publishing)
+
+# Publishes one of the four npm packages via npm Trusted Publishing (OIDC).
+#
+# No stored npm token. Auth is a short-lived credential npm issues after
+# verifying this workflow's GitHub OIDC identity.
+#
+# Each package must designate this workflow as its npm Trusted Publisher:
+#   Package page -> Settings -> Trusted Publisher -> GitHub Actions, with:
+#     Organization/user: Northglass-Labs
+#     Repository:        idle
+#     Workflow filename: npm-publish.yml
+#     Environment:       npm-release
+# Release @northglass/idle-wire first, followed by @northglass/idle-server and
+# idle-coder; @northglass/agent can follow the matching wire release.
+#
+# USAGE:
+#   1. Bump the target package's version in its package.json, commit, push main.
+#   2. Actions tab -> "npm publish (Trusted Publishing)" -> Run workflow ->
+#      pick the package -> Run.
+#   Releases are accepted only from the protected main branch.
+#   `npm publish` runs the package's prepublishOnly hook (build + tests) first,
+#   so a failing build or test aborts the publish safely.
+
+on:
+  workflow_dispatch:
+    inputs:
+      package:
+        description: Which package to publish
+        required: true
+        type: choice
+        options:
+          - "@northglass/idle-server"
+          - idle-coder
+          - "@northglass/idle-wire"
+          - "@northglass/agent"
+
+concurrency:
+  # One publish at a time per package; never cancel an in-flight publish.
+  group: npm-publish-${{ inputs.package }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: npm-release
+    permissions:
+      id-token: write   # REQUIRED — lets npm verify this workflow's OIDC identity
+      contents: read
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          # Build the exact protected-main commit that authorized this run.
+          ref: ${{ github.sha }}
+          persist-credentials: false
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          # Node 24 includes an OIDC-capable npm. Keep that toolchain fixed for
+          # the entire job instead of mutating the package manager in place.
+          node-version: 24
+          cache: yarn
+          cache-dependency-path: yarn.lock
+
+      - name: Verify npm version supports OIDC (>= 11.5.1)
+        run: |
+          NPM_V="$(npm --version)"
+          echo "npm version: $NPM_V"
+          if [ "$(printf '%s\n11.5.1\n' "$NPM_V" | sort -V | head -1)" != "11.5.1" ]; then
+            echo "::error::npm $NPM_V is older than 11.5.1 — OIDC Trusted Publishing needs >= 11.5.1"
+            exit 1
+          fi
+          echo "npm $NPM_V supports OIDC Trusted Publishing."
+
+      - name: Install dependencies
+        # Root install also builds @northglass/idle-wire via the postinstall
+        # hook (scripts/postinstall.cjs) — idle-coder/agent import its dist/.
+        run: yarn install --frozen-lockfile
+
+      - name: Build idle-wire (explicit — idle-coder/agent depend on its dist)
+        run: yarn workspace @northglass/idle-wire build
+
+      - name: Verify the exact Idle server dependency is already published
+        if: inputs.package == 'idle-coder'
+        run: |
+          REQUIRED_VERSION="$(node -p "require('./packages/idle-cli/package.json').dependencies['@northglass/idle-server']")"
+          if ! npm view "@northglass/idle-server@$REQUIRED_VERSION" version >/dev/null 2>&1; then
+            echo "::error::Publish @northglass/idle-server@$REQUIRED_VERSION before idle-coder."
+            exit 1
+          fi
+          echo "Found @northglass/idle-server@$REQUIRED_VERSION on npm."
+
+      - name: Verify the matching Idle wire release is already published
+        if: inputs.package == 'idle-coder' || inputs.package == '@northglass/idle-server' || inputs.package == '@northglass/agent'
+        run: |
+          WIRE_VERSION="$(node -p "require('./packages/idle-wire/package.json').version")"
+          if ! npm view "@northglass/idle-wire@$WIRE_VERSION" version >/dev/null 2>&1; then
+            echo "::error::Publish @northglass/idle-wire@$WIRE_VERSION before the Idle server/CLI release pair."
+            exit 1
+          fi
+          echo "Found @northglass/idle-wire@$WIRE_VERSION on npm."
+
+      - name: Resolve package directory
+        id: pkg
+        run: |
+          case "${{ inputs.package }}" in
+            "@northglass/idle-server") echo "dir=packages/idle-server" >> "$GITHUB_OUTPUT" ;;
+            idle-coder)              echo "dir=packages/idle-cli"   >> "$GITHUB_OUTPUT" ;;
+            "@northglass/idle-wire") echo "dir=packages/idle-wire" >> "$GITHUB_OUTPUT" ;;
+            "@northglass/agent")     echo "dir=packages/idle-agent">> "$GITHUB_OUTPUT" ;;
+            *) echo "::error::unknown package '${{ inputs.package }}'"; exit 1 ;;
+          esac
+
+      - name: Refuse to overwrite an existing npm version
+        run: |
+          PACKAGE_DIR="${{ steps.pkg.outputs.dir }}"
+          PACKAGE_NAME="$(node -p "require('./${PACKAGE_DIR}/package.json').name")"
+          PACKAGE_VERSION="$(node -p "require('./${PACKAGE_DIR}/package.json').version")"
+          PACKAGE_SPEC="${PACKAGE_NAME}@${PACKAGE_VERSION}"
+          set +e
+          npm view "$PACKAGE_SPEC" version --json > "$RUNNER_TEMP/npm-view.txt" 2>&1
+          VIEW_STATUS=$?
+          set -e
+          if [ "$VIEW_STATUS" -eq 0 ]; then
+            echo "::error::$PACKAGE_SPEC already exists on npm; bump the version before publishing."
+            exit 1
+          fi
+          if ! grep -qE 'E404|404 Not Found' "$RUNNER_TEMP/npm-view.txt"; then
+            echo "::error::Could not safely determine whether $PACKAGE_SPEC exists on npm."
+            sed -n '1,20p' "$RUNNER_TEMP/npm-view.txt"
+            exit 1
+          fi
+          echo "$PACKAGE_SPEC is available for first publication."
+
+      - name: Verify public tarball contracts for Idle release packages
+        if: inputs.package == 'idle-coder' || inputs.package == '@northglass/idle-server' || inputs.package == '@northglass/idle-wire' || inputs.package == '@northglass/agent'
+        run: |
+          yarn workspace @northglass/idle-server build:runtime
+          yarn workspace idle-coder build
+          yarn workspace @northglass/agent build
+          node --test packages/idle-server/scripts/package-contract.test.cjs
+
+      - name: Publish via OIDC Trusted Publishing
+        working-directory: ${{ steps.pkg.outputs.dir }}
+        # No NODE_AUTH_TOKEN / .npmrc token. npm 11.5.1+ detects the OIDC
+        # environment, exchanges the GitHub id-token with the registry for a
+        # short-lived publish credential. --provenance attaches a build
+        # provenance attestation (free with OIDC; repo is public).
+        run: npm publish --provenance --access public

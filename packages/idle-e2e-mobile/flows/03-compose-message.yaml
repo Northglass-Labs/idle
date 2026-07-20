@@ -1,0 +1,20 @@
+# Compose-message flow — assumes the user is already authenticated and has at
+# least one existing session.
+#
+# Verifies the on-device composer path: open a session, send a message, and
+# confirm the user's message renders in the chat list.
+#
+# Run: maestro test flows/03-compose-message.yaml
+appId: ${APP_ID}
+---
+- runFlow: 02-open-session.yaml
+
+- tapOn:
+    id: "agent-input-text"
+- inputText: "Maestro compose smoke"
+- tapOn:
+    id: "agent-input-send"
+
+- assertVisible:
+    text: "Maestro compose smoke"
+- takeScreenshot: compose-message-sent

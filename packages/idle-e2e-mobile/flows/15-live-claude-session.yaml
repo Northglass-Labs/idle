@@ -1,0 +1,23 @@
+# Release-candidate Claude round trip. The app must already be paired with an
+# online machine whose Claude Code installation is authenticated.
+appId: ${APP_ID}
+---
+- launchApp:
+    clearState: false
+- tapOn:
+    id: "start-new-session"
+- assertVisible:
+    id: "new-session-prompt"
+- tapOn:
+    id: "new-session-agent-picker"
+- tapOn:
+    id: "picker-option-claude"
+- tapOn:
+    id: "new-session-prompt"
+- inputText: "Reply with exactly: IDLE-SIM-CLAUDE-OK"
+- tapOn:
+    id: "new-session-submit"
+- extendedWaitUntil:
+    visible: "IDLE-SIM-CLAUDE-OK"
+    timeout: 60000
+- takeScreenshot: release-claude-round-trip

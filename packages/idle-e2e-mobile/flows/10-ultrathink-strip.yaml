@@ -1,0 +1,40 @@
+# /ultrathink directive strip — verifies sending `/ultrathink <body>` strips
+# the prefix from the rendered message bubble.
+#
+# This flow asserts:
+#   1. Composer accepts `/ultrathink hello world` without crashing
+#   2. After send, the message bubble shows "hello world"
+#   3. The bubble does NOT show "/ultrathink hello world" (prefix stripped)
+#
+# Prereqs: simulator authenticated, ≥1 session that uses Claude.
+# Run: ../scripts/run-authed.sh flows/10-ultrathink-strip.yaml
+appId: ${APP_ID}
+---
+- launchApp:
+    clearState: false
+- assertVisible:
+    id: "sessions-list"
+
+- tapOn:
+    id: "session-row"
+    index: 0
+- assertVisible:
+    id: "agent-input-text"
+
+# Type the directive and its prompt body.
+- tapOn:
+    id: "agent-input-text"
+- inputText: "/ultrathink hello world"
+- takeScreenshot: composer-with-ultrathink-prefix
+
+- tapOn:
+    id: "agent-input-send"
+
+# The rendered message should contain only the prompt body.
+- assertVisible:
+    text: "hello world"
+- takeScreenshot: bubble-shows-stripped-body
+
+# The directive prefix must not appear in the rendered message.
+- assertNotVisible:
+    text: "/ultrathink hello world"

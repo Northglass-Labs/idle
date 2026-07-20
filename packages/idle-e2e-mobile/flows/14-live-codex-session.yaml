@@ -1,0 +1,28 @@
+# Release-candidate Codex round trip. The app must already be paired with an
+# online machine whose Codex CLI is authenticated.
+appId: ${APP_ID}
+---
+- launchApp:
+    clearState: false
+- tapOn:
+    id: "start-new-session"
+- assertVisible:
+    id: "new-session-prompt"
+- tapOn:
+    id: "new-session-agent-picker"
+- tapOn:
+    id: "picker-option-codex"
+- tapOn:
+    id: "new-session-prompt"
+- inputText: "Reply with exactly: IDLE-SIM-CODEX-OK"
+- tapOn:
+    id: "new-session-submit"
+- runFlow:
+    when:
+      visible: "Use Codex Native Sandbox?"
+    commands:
+      - tapOn: "Continue"
+- extendedWaitUntil:
+    visible: "IDLE-SIM-CODEX-OK"
+    timeout: 60000
+- takeScreenshot: release-codex-round-trip

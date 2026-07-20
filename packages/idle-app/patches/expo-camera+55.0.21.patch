@@ -1,0 +1,58 @@
+diff --git a/node_modules/expo-camera/ios/CameraViewModule.swift b/node_modules/expo-camera/ios/CameraViewModule.swift
+index 9393b89..fa6f1c0 100644
+--- a/node_modules/expo-camera/ios/CameraViewModule.swift
++++ b/node_modules/expo-camera/ios/CameraViewModule.swift
+@@ -416 +416,4 @@ public final class CameraViewModule: Module, ScannerResultHandler {
+-    appContext?.utilities?.currentViewController()?.present(controller, animated: true) {
++    appContext?.utilities?.currentViewController()?.present(controller, animated: true) { [weak self] in
++      if let delegate = self?.scannerContext?.delegate as? VisionScannerDelegate {
++        controller.presentationController?.delegate = delegate
++      }
+@@ -427,2 +430,3 @@ public final class CameraViewModule: Module, ScannerResultHandler {
+-    controller.stopScanning()
+-    controller.dismiss(animated: true)
++    controller.dismiss(animated: true) { [weak self] in
++      self?.onScannerDismissed()
++    }
+@@ -434,0 +439,10 @@ public final class CameraViewModule: Module, ScannerResultHandler {
++  @MainActor
++  func onScannerDismissed() {
++    if #available(iOS 16.0, *) {
++      if let controller = scannerContext?.controller as? DataScannerViewController {
++        controller.stopScanning()
++      }
++    }
++    scannerContext = nil
++  }
++
+diff --git a/node_modules/expo-camera/ios/Current/VisionScannerDelegate.swift b/node_modules/expo-camera/ios/Current/VisionScannerDelegate.swift
+index e50439a..2a4c930 100644
+--- a/node_modules/expo-camera/ios/Current/VisionScannerDelegate.swift
++++ b/node_modules/expo-camera/ios/Current/VisionScannerDelegate.swift
+@@ -5,0 +6,2 @@ protocol ScannerResultHandler {
++
++  @MainActor func onScannerDismissed()
+@@ -9 +11 @@ protocol ScannerResultHandler {
+-class VisionScannerDelegate: NSObject, DataScannerViewControllerDelegate {
++class VisionScannerDelegate: NSObject, DataScannerViewControllerDelegate, UIAdaptivePresentationControllerDelegate {
+@@ -16,2 +18,2 @@ class VisionScannerDelegate: NSObject, DataScannerViewControllerDelegate {
+-  func dataScanner(_ dataScanner: DataScannerViewController, didUpdate updatedItems: [RecognizedItem], allItems: [RecognizedItem]) {
+-    if let item = updatedItems.first {
++  private func handle(items: [RecognizedItem]) {
++    if let item = items.first {
+@@ -21 +23 @@ class VisionScannerDelegate: NSObject, DataScannerViewControllerDelegate {
+-      case .text(let text):
++      case .text:
+@@ -28,0 +31,12 @@ class VisionScannerDelegate: NSObject, DataScannerViewControllerDelegate {
++
++  func dataScanner(_ dataScanner: DataScannerViewController, didAdd addedItems: [RecognizedItem], allItems: [RecognizedItem]) {
++    handle(items: addedItems)
++  }
++
++  func dataScanner(_ dataScanner: DataScannerViewController, didUpdate updatedItems: [RecognizedItem], allItems: [RecognizedItem]) {
++    handle(items: updatedItems)
++  }
++
++  func presentationControllerDidDismiss(_ presentationController: UIPresentationController) {
++    handler.onScannerDismissed()
++  }

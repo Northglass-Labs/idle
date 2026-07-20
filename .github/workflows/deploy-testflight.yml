@@ -1,0 +1,99 @@
+name: Deploy to TestFlight
+
+# Maintainer-triggered distribution only. Protect the production environment
+# with required reviewers so repository changes cannot upload a binary alone.
+on:
+  workflow_dispatch:
+    inputs:
+      sha:
+        description: Exact 40-character commit SHA from public main
+        required: true
+        type: string
+
+concurrency:
+  group: deploy-testflight
+  cancel-in-progress: false
+
+env:
+  PUBLIC_SHA: ${{ inputs.sha }}
+
+jobs:
+  build-and-submit:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    environment: production
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          # The untrusted manual input confirms the event commit; it never
+          # selects what Actions checks out.
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify immutable release authorization
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$PUBLIC_SHA" =~ ^[0-9a-f]{40}$ ]]
+          test "$GITHUB_SHA" = "$PUBLIC_SHA"
+          test "$(git rev-parse HEAD)" = "$PUBLIC_SHA"
+          git fetch --no-tags origin main
+          test "$(git rev-parse origin/main)" = "$PUBLIC_SHA"
+          git merge-base --is-ancestor "$PUBLIC_SHA" origin/main
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+          cache: yarn
+          cache-dependency-path: yarn.lock
+
+      - run: yarn install --frozen-lockfile
+
+      - name: Setup EAS
+        uses: expo/expo-github-action@c7b66a9c327a43a8fa7c0158e7f30d6040d2481e # v8
+        with:
+          eas-version: 20.5.1
+
+      - name: Build idle-wire (shared types)
+        run: yarn workspace @northglass/idle-wire build
+
+      - name: Verify exact production upload archive
+        working-directory: packages/idle-app
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: |
+          : "${EXPO_TOKEN:?EXPO_TOKEN is required for EAS archive inspection}"
+          unset GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE GIT_COMMON_DIR
+          unset GIT_OBJECT_DIRECTORY GIT_ALTERNATE_OBJECT_DIRECTORIES
+          EAS_ARCHIVE="$RUNNER_TEMP/idle-eas-archive"
+          node ../../scripts/verify-release-source.mjs "$PUBLIC_SHA"
+          eas build:inspect \
+            --platform ios \
+            --profile production \
+            --stage archive \
+            --output "$EAS_ARCHIVE" \
+            --force
+          node ../../scripts/verify-eas-archive.mjs "$EAS_ARCHIVE"
+
+      - name: Build and submit to TestFlight
+        working-directory: packages/idle-app
+        env:
+          COMMIT_SHA: ${{ env.PUBLIC_SHA }}
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: |
+          : "${EXPO_TOKEN:?EXPO_TOKEN is required for TestFlight release}"
+          unset GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE GIT_COMMON_DIR
+          unset GIT_OBJECT_DIRECTORY GIT_ALTERNATE_OBJECT_DIRECTORIES
+          node ../../scripts/verify-release-source.mjs "$PUBLIC_SHA"
+          eas build \
+            --platform ios \
+            --profile production \
+            --freeze-credentials \
+            --auto-submit \
+            --non-interactive \
+            --wait \
+            --message "CI build from ${COMMIT_SHA:0:7}"

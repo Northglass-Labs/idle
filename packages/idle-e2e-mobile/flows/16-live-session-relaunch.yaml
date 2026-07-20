@@ -1,0 +1,14 @@
+# Relaunch after the Claude release flow and prove the newest session history
+# remains readable. Run immediately after 15-live-claude-session.yaml.
+appId: ${APP_ID}
+---
+- stopApp
+- launchApp:
+    clearState: false
+- assertVisible:
+    id: "sessions-list"
+- tapOn:
+    id: "active-session-row"
+    index: 0
+- assertVisible: "IDLE-SIM-CLAUDE-OK"
+- takeScreenshot: release-session-after-relaunch

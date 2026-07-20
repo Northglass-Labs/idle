@@ -1,0 +1,26 @@
+node_modules/
+dist/
+tmp/
+package/
+*.tsbuildinfo
+*.log
+.DS_Store
+.idea/
+.vscode/
+
+# Local configuration and credentials
+.env
+.env*.local
+.envrc
+.npmrc
+
+# Generated tool and package artifacts
+tools/unpacked/
+tools/server/
+tools/webapp/
+idle-coder-*.tgz
+
+# Local data and worktrees
+.idle/
+.idle-dev/
+.worktrees/

@@ -1,0 +1,33 @@
+# Long-press menu — verifies that long-pressing a session opens the actions
+# bottom sheet.
+#
+# Prereqs: simulator must already be authenticated and have ≥1 session.
+# Run: ../scripts/run-authed.sh flows/04-long-press-menu.yaml
+appId: ${APP_ID}
+---
+- launchApp:
+    clearState: false
+- assertVisible:
+    id: "sessions-list"
+- assertVisible:
+    id: "session-row"
+
+# Long-press the first session to open its actions.
+- longPressOn:
+    id: "session-row"
+    index: 0
+
+# Assert the expected actions using their visible labels.
+- assertVisible: "Details"
+- assertVisible: "Rename"
+- assertVisible: "Move to top"
+- assertVisible: "Move to group"
+- assertVisible: "Rearrange sessions"
+- takeScreenshot: long-press-menu-open
+
+# Tap outside to dismiss and confirm we're back on the list.
+- tapOn:
+    point: "50%,5%"
+- assertNotVisible: "Rearrange sessions"
+- assertVisible:
+    id: "sessions-list"

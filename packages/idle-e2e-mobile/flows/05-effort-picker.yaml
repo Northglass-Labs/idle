@@ -1,0 +1,37 @@
+# Effort picker visibility — verifies the per-session effort selector and its
+# supported options render.
+#
+# Prereqs: simulator authenticated, ≥1 session, that session is using
+# Claude (not Gemini — Gemini sessions don't have effort).
+# Run: ../scripts/run-authed.sh flows/05-effort-picker.yaml
+appId: ${APP_ID}
+---
+- launchApp:
+    clearState: false
+- assertVisible:
+    id: "sessions-list"
+
+- tapOn:
+    id: "session-row"
+    index: 0
+- assertVisible:
+    id: "session-screen"
+
+# Open per-session settings via the cogwheel/gear icon in the input area.
+# The stable agent-input-settings test ID keeps this step deterministic.
+- tapOn:
+    id: "agent-input-settings"
+
+# Assert the three pickers all render: model, permission mode, effort
+- assertVisible: "Model"
+- assertVisible: "Permission"
+- assertVisible:
+    text: "[Ee]ffort"   # case-insensitive — label might be "Effort" or "effort"
+- takeScreenshot: effort-picker-visible
+
+# Verify the Claude effort options.
+- assertVisible: "low"
+- assertVisible: "medium"
+- assertVisible: "high"
+- assertVisible: "xhigh"
+- assertVisible: "max"

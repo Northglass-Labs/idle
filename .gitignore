@@ -1,0 +1,86 @@
+# Dependencies and generated output
+node_modules/
+dist/
+web-build/
+*.tsbuildinfo
+packages/idle-cli/package/
+packages/idle-cli/tools/unpacked/
+packages/idle-cli/tools/server/
+packages/idle-cli/tools/webapp/
+
+# Expo and generated native projects
+.expo/
+expo-env.d.ts
+/ios/
+/android/
+/packages/idle-app/ios/
+/packages/idle-app/android/
+packages/idle-app/google-services.json
+.kotlin/
+.metro-health-check*
+
+# Local credentials and signing material
+.env*
+credentials.json
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.pem
+!packages/idle-app/certs/certificate.pem
+!packages/idle-app/certs/public-key.pem
+packages/idle-app/certs/private-key.pem
+.npmrc
+**/.npmrc
+.yarnrc
+**/.yarnrc
+.yarnrc.yml
+**/.yarnrc.yml
+.netrc
+**/.netrc
+.pypirc
+**/.pypirc
+
+# Editor, agent, and workspace state
+.idea/
+.vscode/
+AGENTS.md
+**/AGENTS.md
+CLAUDE.md
+**/CLAUDE.md
+CLAUDE.local.md
+.agents/
+**/.agents/
+.claude/
+**/.claude/
+.codex/
+**/.codex/
+.mcp.json
+**/.mcp.json
+.worktrees/
+.dev/worktree/
+.plan
+notes/
+docs/notes/
+
+# Managed local environments
+.environments/
+environments/data/
+data/
+.idle-fully-local/
+.idle-dev/
+
+# Logs and operating-system files
+*.log
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+.DS_Store
+*.orig.*
+
+# Test traces and scratch output
+packages/idle-app/sources/sync/__testdata__/trace_*.json
+packages/idle-e2e/playwright-report/
+packages/idle-e2e/test-results/
+idle-workspaces/

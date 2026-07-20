@@ -1,0 +1,39 @@
+# Context indicator — verifies the user can enable the context ring, open its
+# details, and return to the session.
+#
+# Prereqs: simulator authenticated; ≥1 active session.
+# Run: ../scripts/run-authed.sh flows/08-context-indicator.yaml
+appId: ${APP_ID}
+---
+- launchApp:
+    clearState: false
+- assertVisible:
+    id: "sessions-list"
+
+# Enabling the setting makes the ring available without requiring usage data.
+- tapOn: "Settings"
+- tapOn: "Appearance"
+- tapOn: "Always show context size"
+- back
+- back
+
+# Open the first active session and verify the composer ring.
+- tapOn:
+    id: "session-row"
+    index: 0
+- assertVisible:
+    id: "agent-input-text"
+
+- assertVisible:
+    id: "context-enso-wrapper"
+- takeScreenshot: context-enso-visible
+
+# Tap the ring to open its detail sheet.
+- tapOn:
+    id: "context-enso"
+- assertVisible:
+    id: "context-enso-sheet"
+- takeScreenshot: context-enso-sheet-opened
+
+# The system back action exercises the sheet's close contract.
+- back

@@ -1,0 +1,35 @@
+{
+  "entries": [
+    {
+      "title": "Idle 0.4.22 — 2026-07-19",
+      "summary": "QR pairing is quick and dependable again, even when your camera needs a moment.",
+      "markdown": "- Fixed iPhone scanning so a newly recognized account or terminal QR code is\n  delivered immediately instead of waiting for the camera view to change.\n- Pairing now stays ready for up to two minutes and closes the scanner cleanly\n  when the attempt ends. Fifteen seconds was optimistic, even for a computer."
+    },
+    {
+      "title": "Idle 0.4.21 — 2026-07-16",
+      "summary": "Security and reliability hardening for safer, more responsive remote sessions.",
+      "markdown": "- Codex sandbox startup now uses supported isolated authentication paths and\n  reports clear credential errors without silently broadening permissions.\n- Waiting on an archived session now completes promptly, so remote controls do\n  not linger on or send work to a session that has already closed.\n- Every terminal-pairing path now shows the same requester fingerprint and\n  clearly explains the durable account authority being granted.\n- Privacy copy now distinguishes encrypted session content from relay-visible\n  account, routing, and operational metadata.\n- Native update checks now return no destination until an Idle store listing is\n  verified, removing invalid or unrelated store redirects.\n- TestFlight source identity, EAS credential exclusions, container\n  immutability, dependency checks, and upstream-import provenance received\n  additional hardening.\n- Fixed iOS archive compatibility with the current Expo and React Native\n  toolchain.\n- Reduced unused web font assets and added strict generated-release checks for\n  unintended branding or internal markers.\n- Kept dependency package metadata out of release bundles while preserving\n  required license attribution."
+    },
+    {
+      "title": "Idle 0.4.20 — 2026-07-12",
+      "summary": "Safer defaults, clearer privacy controls, and more reliable remote sessions.",
+      "markdown": "- Agent approvals now remain on their normal safe defaults unless you\n  explicitly select a more powerful mode. Codex `--yolo` and Claude\n  `--dangerously-skip-permissions` remain available as deliberate choices.\n- Session reconnection, message catch-up, attachment handling, resume, abort,\n  and background delivery are more resilient across iOS and web.\n- Product analytics is off by default and starts only after versioned,\n  explicit consent. Prompts, responses, URLs, relay hostnames, and account or\n  session identifiers stay outside the analytics boundary.\n- Server-mediated voice now uses a server-owned agent and fails closed when\n  usage cannot be verified. Direct bring-your-own-agent voice remains\n  available.\n- Account deletion, self-hosted relay selection, session grouping, file tools,\n  accessible status details, and first-run pairing guidance are easier to find."
+    },
+    {
+      "title": "Idle 0.4.0 — 2026-03-19",
+      "summary": "Expanded remote session control across supported coding agents.",
+      "markdown": "- Added Codex, Gemini, and OpenClaw session support alongside Claude Code.\n- Added daemon-backed remote session launch, resume, worktree selection, and\n  session quick actions.\n- Added model, reasoning-effort, and permission controls that travel with each\n  session.\n- Improved encrypted synchronization, Markdown rendering, and mobile session\n  management."
+    },
+    {
+      "title": "Idle 0.3.0 — 2025-08-29",
+      "summary": "Introduced secure device pairing and connected integrations.",
+      "markdown": "- Added QR and deep-link pairing for mobile, web, and CLI clients.\n- Added optional GitHub connection with server-side encrypted token storage.\n- Added voice conversations and improved multi-device synchronization.\n- Added dark mode and responsive iOS, Android, and web layouts."
+    },
+    {
+      "title": "Idle 0.1.0 — 2025-05-12",
+      "summary": "Initial public release of the encrypted mobile companion for coding agents.",
+      "markdown": "- Added end-to-end encrypted session messages, metadata, and shared files.\n- Added real-time relay synchronization between a coding machine and mobile\n  clients.\n- Added session management, permission requests, and a file browser."
+    }
+  ],
+  "latestTitle": "Idle 0.4.22 — 2026-07-19"
+}

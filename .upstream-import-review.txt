@@ -1,0 +1,5 @@
+# Exact reviews for otherwise blocked upstream-import additions.
+# Format: kind<TAB>path<TAB>fingerprint<TAB>base SHA<TAB>source SHA<TAB>import SHA<TAB>public reason
+#
+# Commit reviews alone and merge them before the import; same-delta reviews fail.
+# Paths, content, base, source, and imported delta are exact; wildcards fail.

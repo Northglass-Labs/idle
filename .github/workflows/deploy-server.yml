@@ -1,0 +1,119 @@
+name: Server Release Verification
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'packages/idle-server/**'
+      - 'packages/idle-wire/**'
+      - 'patches/**'
+      - 'scripts/container-boundary.test.mjs'
+      - 'scripts/release-boundary.test.mjs'
+      - 'Dockerfile'
+      - 'docker-compose.yml'
+      - '.dockerignore'
+      - 'package.json'
+      - 'yarn.lock'
+      - '.github/workflows/deploy-server.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'packages/idle-server/**'
+      - 'packages/idle-wire/**'
+      - 'patches/**'
+      - 'scripts/container-boundary.test.mjs'
+      - 'scripts/release-boundary.test.mjs'
+      - 'Dockerfile'
+      - 'docker-compose.yml'
+      - '.dockerignore'
+      - 'package.json'
+      - 'yarn.lock'
+      - '.github/workflows/deploy-server.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: server-release-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+          cache: yarn
+          cache-dependency-path: yarn.lock
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Build shared wire types
+        run: yarn workspace @northglass/idle-wire build
+
+      - name: Build the server runtime
+        run: yarn workspace @northglass/idle-server build:runtime
+
+      - name: Run the server test suite
+        run: yarn workspace @northglass/idle-server test
+
+      - name: Verify release and container boundaries
+        run: node --test scripts/container-boundary.test.mjs scripts/release-boundary.test.mjs
+
+      - name: Build the self-hosted server image
+        run: docker build --tag idle-server-ci .
+
+      - name: Smoke-test the server image
+        shell: bash
+        run: |
+          set -euo pipefail
+          export IDLE_MASTER_SECRET="$(openssl rand -hex 32)"
+          export IDLE_AUTH_AUDIENCE=http://localhost:3005
+          container_id="$(docker run --detach \
+            --read-only \
+            --tmpfs /tmp:rw,noexec,nosuid,nodev \
+            --env IDLE_MASTER_SECRET \
+            --env IDLE_AUTH_AUDIENCE \
+            idle-server-ci)"
+          unset IDLE_MASTER_SECRET IDLE_AUTH_AUDIENCE
+          trap 'docker rm --force "$container_id" >/dev/null 2>&1 || true' EXIT
+
+          for _ in $(seq 1 60); do
+            state="$(docker inspect --format '{{.State.Status}}' "$container_id")"
+            health_status="$(docker inspect --format '{{.State.Health.Status}}' "$container_id")"
+            if [ "$health_status" = healthy ]; then
+              docker exec "$container_id" \
+                test ! -w /repo/packages/idle-server/dist/standalone.mjs
+              docker exec "$container_id" \
+                test ! -w /repo/packages/idle-server/prisma/schema.prisma
+              exit 0
+            fi
+            if [ "$state" = exited ] || [ "$health_status" = unhealthy ]; then
+              break
+            fi
+            sleep 2
+          done
+
+          docker logs "$container_id"
+          exit 1
+
+      - name: Reject fixable high-severity image vulnerabilities
+        run: |
+          set -euo pipefail
+          archive="$RUNNER_TEMP/idle-server-ci.tar"
+          docker save --output "$archive" idle-server-ci
+          docker run --rm \
+            --volume "$RUNNER_TEMP:/scan:ro" \
+            anchore/grype@sha256:391bfda62888fb4e98ff5c4c81598f7431a3c1eac3f8519d69d1ff00df247c1d \
+            docker-archive:/scan/idle-server-ci.tar \
+            --only-fixed \
+            --fail-on high \
+            --output table

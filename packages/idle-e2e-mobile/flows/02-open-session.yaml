@@ -1,0 +1,24 @@
+# Open-session flow — assumes the user is already authenticated.
+#
+# Goal: verify the sessions list renders, that tapping a session opens the
+# chat view, and that existing messages render immediately.
+#
+# Run: maestro test flows/02-open-session.yaml (requires existing auth)
+appId: ${APP_ID}
+---
+- launchApp:
+    clearState: false
+- assertVisible:
+    id: "sessions-list"
+- assertVisible:
+    id: "session-row"
+- takeScreenshot: sessions-list-loaded
+
+- tapOn:
+    id: "session-row"
+    index: 0
+- assertVisible:
+    id: "session-screen"
+- assertVisible:
+    id: "agent-input-text"
+- takeScreenshot: chat-opened

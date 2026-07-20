@@ -1,0 +1,5 @@
+Northglass <hello@northglass.io> — author and maintainer
+
+Idle incorporates work from Happy (https://github.com/slopus/happy) by Slopus.
+Relevant MIT notices are preserved in the root and package license files. The
+upstream repository retains its contributor history.

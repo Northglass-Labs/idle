@@ -1,0 +1,114 @@
+# EAS Build upload boundary for the whole monorepo. The pinned Git-backed EAS
+# client resolves this file from the Git root even when commands run in
+# packages/idle-app.
+
+# Repository history and maintainer-local configuration
+.git
+.github
+.github/
+.claude
+.claude/
+.codex
+.codex/
+.agents
+.agents/
+.mcp.json
+.cursorrules
+CLAUDE.md
+AGENTS.md
+.vscode
+.vscode/
+.idea
+.idea/
+
+# dependencies
+node_modules/
+
+# Expo
+.expo
+.expo/
+dist
+dist/
+web-build/
+expo-env.d.ts
+/ios
+/android
+packages/idle-app/google-services.json
+
+# Native
+.kotlin/
+*.orig.*
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+
+# Metro
+.metro-health-check*
+
+# debug
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+*.log
+
+# macOS
+.DS_Store
+*.pem
+# Security hardening: the public EAS OTA code-signing certificate + public key MUST
+# be uploaded to EAS Build so prebuild can wire them into the iOS Info.plist /
+# Android updates config. The private key lives only in EAS env
+# EXPO_UPDATE_PRIVATE_KEY (production environment) — never on disk in EAS.
+!packages/idle-app/certs/certificate.pem
+!packages/idle-app/certs/public-key.pem
+
+# local environment files
+.env*
+credentials.json
+.npmrc
+**/.npmrc
+.yarnrc
+**/.yarnrc
+.yarnrc.yml
+**/.yarnrc.yml
+.netrc
+**/.netrc
+.pypirc
+**/.pypirc
+
+# typescript
+*.tsbuildinfo
+
+# Local plans
+.plan
+
+# Dev environments
+.environments
+.environments/
+environments/data
+environments/data/
+
+# Docs and notes (not needed for build)
+docs
+docs/
+notes
+notes/
+
+# Native projects are generated remotely. Local native builds and the
+# standalone cryptography harness are never part of the production app.
+packages/idle-app/ios
+packages/idle-app/ios/
+packages/idle-app/android
+packages/idle-app/android/
+packages/idle-app/native-tests
+packages/idle-app/native-tests/
+packages/idle-app/.eas/workflows
+packages/idle-app/.eas/workflows/
+
+# Native CLI payloads are not source inputs. File discovery uses a system
+# ripgrep installation or the bounded JavaScript fallback.
+packages/idle-cli/tools
+packages/idle-cli/tools/
+packages/idle-cli/package
+packages/idle-cli/package/

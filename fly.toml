@@ -1,0 +1,38 @@
+# Generic Fly.io template for the Idle relay in standalone PGlite mode.
+# App identity and placement are intentionally left to each deployment.
+# See docs/deploy-targets/fly.md for setup and secret-management guidance.
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  PORT = "3005"
+  NODE_ENV = "production"
+
+[http_service]
+  internal_port = 3005
+  force_https = true
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 0
+  processes = ["app"]
+
+  [[http_service.checks]]
+    grace_period = "30s"
+    interval = "30s"
+    method = "GET"
+    timeout = "5s"
+    path = "/health"
+
+[[vm]]
+  # Resource floor for the embedded PGlite runtime.
+  size = "shared-cpu-1x"
+  memory = "1gb"
+  cpu_kind = "shared"
+  cpus = 1
+
+# Persistent relay state.
+[mounts]
+  source = "idle_data"
+  destination = "/data"
+  initial_size = "1gb"

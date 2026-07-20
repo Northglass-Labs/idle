@@ -1,0 +1,131 @@
+name: Test All Packages
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: test-all-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  test-wire:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+          cache: yarn
+          cache-dependency-path: yarn.lock
+
+      - run: yarn install --frozen-lockfile
+
+      - name: Build idle-wire
+        run: yarn workspace @northglass/idle-wire build
+
+      - name: Test idle-wire
+        run: yarn workspace @northglass/idle-wire test
+
+  test-server:
+    needs: test-wire
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+          cache: yarn
+          cache-dependency-path: yarn.lock
+
+      - run: yarn install --frozen-lockfile
+
+      - name: Build idle-wire (shared types)
+        run: yarn workspace @northglass/idle-wire build
+
+      - name: Test server
+        run: yarn workspace @northglass/idle-server test
+
+  test-cli:
+    needs: test-wire
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+          cache: yarn
+          cache-dependency-path: yarn.lock
+
+      - run: yarn install --frozen-lockfile
+
+      - name: Build idle-wire (shared types)
+        run: yarn workspace @northglass/idle-wire build
+
+      - name: Test CLI (unit project only — integration suites need codex/claude/openclaw binaries not on CI runners)
+        run: yarn workspace idle-coder test:unit
+        env:
+          NODE_OPTIONS: '--max-old-space-size=4096'
+
+  test-app:
+    needs: test-wire
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+          cache: yarn
+          cache-dependency-path: yarn.lock
+
+      - run: yarn install --frozen-lockfile
+
+      - name: Build idle-wire (shared types)
+        run: yarn workspace @northglass/idle-wire build
+
+      - name: Test app
+        run: yarn workspace idle-app test
+
+  test-agent:
+    needs: test-wire
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+          cache: yarn
+          cache-dependency-path: yarn.lock
+
+      - run: yarn install --frozen-lockfile
+
+      - name: Build idle-wire (shared types)
+        run: yarn workspace @northglass/idle-wire build
+
+      - name: Test agent
+        run: yarn workspace @northglass/agent test

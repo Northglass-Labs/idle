@@ -1,0 +1,94 @@
+{
+  "cli": {
+    "version": "20.5.1",
+    "requireCommit": true,
+    "appVersionSource": "remote"
+  },
+  "build": {
+    "development": {
+      "autoIncrement": true,
+      "developmentClient": true,
+      "distribution": "internal",
+      "channel": "development",
+      "node": "22.17.0",
+      "env": {
+        "APP_ENV": "development",
+        "SHARP_IGNORE_GLOBAL_LIBVIPS": "1"
+      }
+    },
+    "development-simulator": {
+      "autoIncrement": true,
+      "developmentClient": true,
+      "distribution": "internal",
+      "channel": "development",
+      "node": "22.17.0",
+      "ios": {
+        "simulator": true
+      },
+      "env": {
+        "APP_ENV": "development",
+        "SHARP_IGNORE_GLOBAL_LIBVIPS": "1"
+      }
+    },
+    "development-store": {
+      "autoIncrement": true,
+      "developmentClient": true,
+      "distribution": "store",
+      "channel": "development",
+      "node": "22.17.0",
+      "env": {
+        "APP_ENV": "development",
+        "SHARP_IGNORE_GLOBAL_LIBVIPS": "1"
+      }
+    },
+    "preview": {
+      "autoIncrement": true,
+      "distribution": "internal",
+      "channel": "preview",
+      "node": "22.17.0",
+      "env": {
+        "APP_ENV": "preview",
+        "SHARP_IGNORE_GLOBAL_LIBVIPS": "1"
+      }
+    },
+    "preview-store": {
+      "autoIncrement": true,
+      "distribution": "store",
+      "channel": "preview",
+      "node": "22.17.0",
+      "env": {
+        "APP_ENV": "preview",
+        "SHARP_IGNORE_GLOBAL_LIBVIPS": "1"
+      }
+    },
+    "preview-simulator": {
+      "autoIncrement": true,
+      "distribution": "internal",
+      "channel": "preview",
+      "node": "22.17.0",
+      "ios": {
+        "simulator": true
+      },
+      "env": {
+        "APP_ENV": "preview",
+        "SHARP_IGNORE_GLOBAL_LIBVIPS": "1"
+      }
+    },
+    "production": {
+      "autoIncrement": true,
+      "channel": "production",
+      "node": "22.17.0",
+      "env": {
+        "APP_ENV": "production",
+        "SHARP_IGNORE_GLOBAL_LIBVIPS": "1"
+      }
+    }
+  },
+  "submit": {
+    "production": {
+      "ios": {
+        "ascAppId": "6760240746"
+      }
+    }
+  }
+}

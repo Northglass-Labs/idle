@@ -1,0 +1,76 @@
+# Exact baseline for reviewed upstream attribution and compatibility identifiers.
+# Format: path<TAB>exact case-insensitive occurrence count
+# Wildcards and directories are rejected. A count change requires review.
+
+# License, provenance, and import instructions.
+AUTHORS	4
+LICENSE	1
+README.md	3
+docs/UPSTREAM-SYNC.md	8
+environments/environments.ts	2
+packages/idle-agent/LICENSE	1
+packages/idle-app/LICENSE	1
+packages/idle-cli/LICENSE	1
+packages/idle-server/LICENSE	1
+packages/idle-wire/LICENSE	1
+
+# Agent wire-header compatibility.
+packages/idle-agent/src/api.test.ts	1
+packages/idle-agent/src/api.ts	1
+packages/idle-agent/src/auth.test.ts	1
+packages/idle-agent/src/auth.ts	2
+packages/idle-agent/src/encryption.ts	1
+packages/idle-agent/src/idle-agent.integration.test.ts	1
+
+# App authentication, wire, storage, and retained fixture compatibility.
+packages/idle-app/sources/auth/authAccountApprove.ts	1
+packages/idle-app/sources/auth/authApprove.ts	2
+packages/idle-app/sources/auth/authGetToken.ts	1
+packages/idle-app/sources/auth/authQRStart.ts	1
+packages/idle-app/sources/auth/authQRWait.ts	1
+packages/idle-app/sources/realtime/voiceSystemPrompt.test.ts	1
+packages/idle-app/sources/sync/apiArtifacts.ts	5
+packages/idle-app/sources/sync/apiAttachments.test.ts	12
+packages/idle-app/sources/sync/apiGithub.spec.ts	1
+packages/idle-app/sources/sync/apiGithub.ts	2
+packages/idle-app/sources/sync/apiKv.ts	4
+packages/idle-app/sources/sync/apiPush.ts	3
+packages/idle-app/sources/sync/apiSocket.ts	2
+packages/idle-app/sources/sync/apiUsage.ts	1
+packages/idle-app/sources/sync/apiVoice.ts	2
+packages/idle-app/sources/sync/attachmentDiagnostics.test.ts	24
+packages/idle-app/sources/sync/attachmentDiagnostics.ts	1
+packages/idle-app/sources/sync/encryption/encryption.ts	3
+packages/idle-app/sources/sync/serverConfig.ts	1
+packages/idle-app/sources/sync/sync.ts	6
+packages/idle-app/sources/track/tracking.ts	1
+
+# CLI protocol, storage, fixtures, and live environment-name compatibility.
+packages/idle-cli/scripts/environmentsSecurity.test.ts	2
+packages/idle-cli/src/api/api.ts	3
+packages/idle-cli/src/api/apiMachine.ts	1
+packages/idle-cli/src/api/apiSession.ts	5
+packages/idle-cli/src/api/pushNotifications.ts	2
+packages/idle-cli/src/codex/__tests__/permissionHandler.test.ts	1
+packages/idle-cli/src/commands/auth.ts	1
+packages/idle-cli/src/daemon/daemon.integration.test.ts	1
+packages/idle-cli/src/resume/resolveIdleSession.ts	1
+packages/idle-cli/src/ui/auth.ts	2
+packages/idle-cli/src/ui/logger.ts	1
+packages/idle-cli/src/utils/serverConnectionErrors.ts	1
+
+# Server wire-header/runtime compatibility.
+packages/idle-server/scripts/package-contract.test.cjs	23
+packages/idle-server/sources/app/api/api.ts	1
+packages/idle-server/sources/app/api/socket.ts	6
+packages/idle-server/sources/app/api/socket/socketHandshakeAuth.security.spec.ts	2
+packages/idle-server/sources/app/api/socket/socketHandshakeAuth.ts	4
+packages/idle-server/sources/app/monitoring/metrics2.test.ts	3
+packages/idle-server/sources/app/monitoring/metrics2.ts	2
+packages/idle-server/sources/standalone.ts	2
+
+# Public boundary tests name rejected legacy identifiers as deny patterns.
+scripts/app-release-boundary.test.mjs	5
+scripts/cli-env-boundary.test.mjs	5
+scripts/container-boundary.test.mjs	2
+scripts/source-comment-hygiene.test.mjs	2

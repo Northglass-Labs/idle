@@ -1,0 +1,23 @@
+# Generic Render Blueprint for the Idle relay in standalone PGlite mode.
+# Review docs/deploy-targets/render.md before provisioning resources.
+
+services:
+  - type: web
+    name: idle-server
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /health
+    autoDeployTrigger: checksPass
+    envVars:
+      - key: IDLE_MASTER_SECRET
+        sync: false
+      - key: IDLE_AUTH_AUDIENCE
+        sync: false
+      - key: PORT
+        value: 3005
+      - key: NODE_ENV
+        value: production
+    disk:
+      name: idle-data
+      mountPath: /data
+      sizeGB: 1

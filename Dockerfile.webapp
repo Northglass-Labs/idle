@@ -1,0 +1,62 @@
+# Stage 1: build the exact wire package without installing unrelated workspaces.
+FROM node:22-alpine@sha256:16e22a550f3863206a3f701448c45f7912c6896a62de43add43bb9c86130c3e2 AS wire-builder
+
+WORKDIR /wire
+COPY package.json /workspace-package.json
+COPY yarn.lock ./
+COPY packages/idle-wire/package.json ./
+RUN node -e 'const fs=require("node:fs");const root=JSON.parse(fs.readFileSync("/workspace-package.json","utf8"));const p=JSON.parse(fs.readFileSync("package.json","utf8"));p.resolutions={...root.resolutions,...p.resolutions};fs.writeFileSync("package.json",JSON.stringify(p))'
+RUN yarn install --frozen-lockfile --non-interactive
+COPY packages/idle-wire ./
+RUN yarn build
+
+# Stage 2: install and export only the Expo application.
+FROM node:22-alpine@sha256:16e22a550f3863206a3f701448c45f7912c6896a62de43add43bb9c86130c3e2 AS builder
+
+WORKDIR /app
+COPY package.json /workspace-package.json
+COPY yarn.lock ./
+COPY packages/idle-app ./
+COPY patches/*.cjs ./patches/
+
+# The current wire build is injected from the verified stage below; do not
+# resolve a potentially different registry version during the isolated install.
+RUN node -e 'const fs=require("node:fs");const root=JSON.parse(fs.readFileSync("/workspace-package.json","utf8"));const p=JSON.parse(fs.readFileSync("package.json","utf8"));p.resolutions={...root.resolutions,...p.resolutions};delete p.dependencies["@northglass/idle-wire"];fs.writeFileSync("package.json",JSON.stringify(p))'
+RUN yarn install --frozen-lockfile --non-interactive
+
+COPY --from=wire-builder /wire/package.json /app/node_modules/@northglass/idle-wire/package.json
+COPY --from=wire-builder /wire/dist /app/node_modules/@northglass/idle-wire/dist
+
+ARG EXPO_PUBLIC_POSTHOG_API_KEY=""
+ARG EXPO_PUBLIC_REVENUE_CAT_STRIPE=""
+ARG EXPO_PUBLIC_IDLE_SERVER_URL=""
+
+ENV NODE_ENV=production
+ENV APP_ENV=production
+ENV EXPO_PUBLIC_POSTHOG_API_KEY=$EXPO_PUBLIC_POSTHOG_API_KEY
+ENV EXPO_PUBLIC_REVENUE_CAT_STRIPE=$EXPO_PUBLIC_REVENUE_CAT_STRIPE
+ENV EXPO_PUBLIC_IDLE_SERVER_URL=$EXPO_PUBLIC_IDLE_SERVER_URL
+
+RUN yarn expo export --platform web --output-dir dist \
+    && node scripts/verify-web-export.mjs dist
+
+# Stage 3: runtime with Nginx
+FROM nginx:alpine-slim@sha256:8763397d71453fccb4a2613ccfd89aa62e1d731d618b1eaa8e14631539a3a65b AS runner
+
+COPY --from=builder /app/dist /usr/share/nginx/html
+
+# Keep the runtime policy reviewable and testable without parsing shell-escaped
+# configuration embedded in this Dockerfile.
+COPY nginx.webapp.runtime.conf /etc/nginx/nginx.conf
+COPY nginx.webapp.conf /etc/nginx/conf.d/default.conf
+
+# Nginx normally starts a root master process to bind port 80. Idle serves on
+# an unprivileged port instead, with its PID and temporary paths under the
+# container's mode-1777 /tmp mount.
+RUN chmod -R a-w /usr/share/nginx/html
+
+USER nginx
+EXPOSE 8080
+
+ENTRYPOINT ["nginx"]
+CMD ["-g", "daemon off;"]

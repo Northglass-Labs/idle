@@ -1,0 +1,10 @@
+appId: com.northglass.idle.crypto-harness
+---
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      id: native-crypto-harness-pass
+    timeout: 120000
+- assertNotVisible:
+    id: native-crypto-harness-fail
