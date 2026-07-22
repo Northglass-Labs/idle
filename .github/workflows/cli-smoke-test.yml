@@ -143,128 +143,68 @@ jobs:
         yarn workspace idle-coder build
 
     - name: Pack packages
-      shell: cmd
+      shell: pwsh
       run: |
-        if not exist "%RUNNER_TEMP%\idle-packs" mkdir "%RUNNER_TEMP%\idle-packs"
-        pushd packages\idle-server
-        npm pack --pack-destination "%RUNNER_TEMP%\idle-packs"
-        popd
-        pushd packages\idle-cli
-        npm pack --pack-destination "%RUNNER_TEMP%\idle-packs"
-        popd
+        $ErrorActionPreference = 'Stop'
+        $packDir = Join-Path $env:RUNNER_TEMP 'idle-packs'
+        New-Item -ItemType Directory -Force -Path $packDir | Out-Null
+
+        Push-Location 'packages/idle-server'
+        try {
+          & npm pack --pack-destination $packDir
+          if ($LASTEXITCODE -ne 0) { throw 'Server package creation failed' }
+        } finally {
+          Pop-Location
+        }
+
+        Push-Location 'packages/idle-cli'
+        try {
+          & npm pack --pack-destination $packDir
+          if ($LASTEXITCODE -ne 0) { throw 'CLI package creation failed' }
+        } finally {
+          Pop-Location
+        }
 
     - name: Install packed packages globally
-      shell: cmd
+      shell: pwsh
       run: |
-        for %%f in ("%RUNNER_TEMP%\idle-packs\northglass-idle-server-*.tgz") do set SERVER_PACKAGE=%%f
-        for %%f in ("%RUNNER_TEMP%\idle-packs\idle-coder-*.tgz") do set CLI_PACKAGE=%%f
-        npm install -g "%SERVER_PACKAGE%" "%CLI_PACKAGE%"
+        $ErrorActionPreference = 'Stop'
+        $packDir = Join-Path $env:RUNNER_TEMP 'idle-packs'
+        $serverPackages = @(Get-ChildItem -LiteralPath $packDir -Filter 'northglass-idle-server-*.tgz' -File)
+        $cliPackages = @(Get-ChildItem -LiteralPath $packDir -Filter 'idle-coder-*.tgz' -File)
+        if ($serverPackages.Count -ne 1) { throw 'Expected exactly one server package' }
+        if ($cliPackages.Count -ne 1) { throw 'Expected exactly one CLI package' }
+        $serverPackage = $serverPackages[0].FullName
+        $cliPackage = $cliPackages[0].FullName
 
-    - name: Debug npm global installation structure
-      shell: cmd
-      run: |
-        for /f "tokens=*" %%i in ('npm config get prefix') do set NPM_PREFIX=%%i
-        echo NPM_PREFIX: %NPM_PREFIX%
-        echo Listing npm prefix directory:
-        dir "%NPM_PREFIX%" 2>nul || echo Failed to list NPM_PREFIX
-        echo.
-        echo Checking for node_modules in npm prefix:
-        if exist "%NPM_PREFIX%\node_modules" (
-          echo Found node_modules directory
-          dir "%NPM_PREFIX%\node_modules" 2>nul
-          echo.
-          echo Checking for idle-coder package:
-          if exist "%NPM_PREFIX%\node_modules\idle-coder" (
-            echo Found idle-coder package
-            dir "%NPM_PREFIX%\node_modules\idle-coder" 2>nul
-            echo.
-            echo Checking for dist directory:
-            if exist "%NPM_PREFIX%\node_modules\idle-coder\dist" (
-              echo Found dist directory
-              dir "%NPM_PREFIX%\node_modules\idle-coder\dist" 2>nul
-            ) else (
-              echo No dist directory found
-            )
-          ) else (
-            echo No idle-coder package found
-          )
-        ) else (
-          echo No node_modules directory found
-        )
+        & npm install --global $serverPackage $cliPackage
+        if ($LASTEXITCODE -ne 0) { throw 'Global package installation failed' }
 
     - name: Test binary execution
-      shell: cmd
+      shell: pwsh
       run: |
-        @echo on
+        $ErrorActionPreference = 'Stop'
+        $npmPrefix = (& npm config get prefix).Trim()
+        if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($npmPrefix)) {
+          throw 'Unable to resolve the npm global prefix'
+        }
+        $env:PATH = "$npmPrefix$([IO.Path]::PathSeparator)$env:PATH"
+        $idle = Join-Path $npmPrefix 'idle.cmd'
+        if (-not (Test-Path -LiteralPath $idle -PathType Leaf)) {
+          throw 'Installed Idle command shim was not found'
+        }
+        if (-not (Test-Path -LiteralPath (Join-Path $npmPrefix 'node_modules/idle-coder/dist') -PathType Container)) {
+          throw 'Installed Idle package is missing its runtime bundle'
+        }
 
-        rem Get npm global prefix and add to PATH
-        for /f "tokens=*" %%i in ('npm config get prefix') do set NPM_PREFIX=%%i
-        set PATH=%NPM_PREFIX%;%PATH%
-        echo NPM_PREFIX: %NPM_PREFIX%
-        echo Current PATH: %PATH%
+        Get-Content -LiteralPath $idle -TotalCount 5
+        & $idle --help
+        if ($LASTEXITCODE -ne 0) { throw 'idle --help failed' }
+        & $idle --version
+        if ($LASTEXITCODE -ne 0) { throw 'idle --version failed' }
+        & $idle doctor
+        if ($LASTEXITCODE -ne 0) { throw 'idle doctor failed' }
+        & $idle daemon status
+        if ($LASTEXITCODE -ne 0) { throw 'idle daemon status failed' }
 
-        rem Debug: Check if idle exists in various locations
-        echo Checking for idle binary...
-        where idle 2>nul && echo Found idle in PATH || echo idle not found in PATH
-        if exist "%NPM_PREFIX%\idle.cmd" echo Found idle.cmd in NPM_PREFIX
-        if exist "%NPM_PREFIX%\node_modules\.bin\idle.cmd" echo Found idle.cmd in .bin directory
-        dir "%NPM_PREFIX%\*idle*" 2>nul || echo No idle files found in NPM_PREFIX
-
-        rem Debug: Check the actual contents and encoding of the installed file
-        if exist "%NPM_PREFIX%\idle.cmd" (
-          echo File size and type:
-          dir "%NPM_PREFIX%\idle.cmd"
-          echo.
-          echo First few lines of the file:
-          type "%NPM_PREFIX%\idle.cmd" | head -5
-          echo.
-          echo Hex dump of first 50 bytes to check line endings:
-          powershell -Command "Get-Content '%NPM_PREFIX%\idle.cmd' -Encoding Byte -TotalCount 50 | ForEach-Object { '{0:X2}' -f $_ } | Join-String -Separator ' '"
-          echo.
-          echo Testing with direct path...
-          "%NPM_PREFIX%\idle.cmd" --help
-        ) else (
-          echo Testing idle --help...
-          idle --help
-        )
-        if errorlevel 1 (
-          echo Error: idle --help failed
-          exit /b 1
-        )
-
-        rem Test version
-        if exist "%NPM_PREFIX%\idle.cmd" (
-          "%NPM_PREFIX%\idle.cmd" --version
-        ) else (
-          idle --version
-        )
-        if errorlevel 1 (
-          echo Error: idle --version failed
-          exit /b 1
-        )
-
-        rem Test doctor
-        echo Testing idle doctor...
-        if exist "%NPM_PREFIX%\idle.cmd" (
-          "%NPM_PREFIX%\idle.cmd" doctor
-        ) else (
-          idle doctor
-        )
-        if errorlevel 1 (
-          echo Error: idle doctor failed
-          exit /b 1
-        )
-
-        rem Test daemon status
-        echo Testing idle daemon status...
-        if exist "%NPM_PREFIX%\idle.cmd" (
-          "%NPM_PREFIX%\idle.cmd" daemon status
-        ) else (
-          idle daemon status
-        )
-        if errorlevel 1 (
-          echo Error: idle daemon status failed
-          exit /b 1
-        )
-
-        echo Smoke test passed on Windows!
+        Write-Host 'Smoke test passed on Windows'

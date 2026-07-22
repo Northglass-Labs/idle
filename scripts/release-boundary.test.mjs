@@ -252,6 +252,18 @@ test('ordinary CI workflows run with read-only repository permissions', () => {
   );
 });
 
+test('Windows CLI package smoke uses native PowerShell path handling', () => {
+  const workflow = read('.github/workflows/cli-smoke-test.yml');
+  const windowsJob = workflow.slice(workflow.indexOf('  smoke-test-windows:'));
+
+  assert.doesNotMatch(windowsJob, /shell:\s*cmd/);
+  assert.doesNotMatch(windowsJob, /for %%f|\bhead\s+-/);
+  assert.match(windowsJob, /Get-ChildItem -LiteralPath \$packDir -Filter 'northglass-idle-server-\*\.tgz'/);
+  assert.match(windowsJob, /\$serverPackages\.Count -ne 1/);
+  assert.match(windowsJob, /\$cliPackages\.Count -ne 1/);
+  assert.match(windowsJob, /Test-Path -LiteralPath \$idle -PathType Leaf/);
+});
+
 test('public deploy guides use portable examples, not Northglass operations history', () => {
   const deployDocsDir = path.join(repoRoot, 'docs', 'deploy-targets');
   const docs = fs
