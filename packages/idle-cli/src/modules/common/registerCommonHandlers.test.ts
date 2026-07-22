@@ -59,11 +59,7 @@ vi.mock('@/ui/logger', () => ({ logger: { debug: mocks.loggerDebug } }));
 import { registerCommonHandlers } from './registerCommonHandlers';
 
 const execFileAsync = promisify(execFile);
-
-async function configuredGitFixtureEmail(): Promise<string> {
-    const { stdout } = await execFileAsync('git', ['config', '--get', 'user.email']);
-    return stdout.trim() || 'idle-security-fixture@users.noreply.github.com';
-}
+const GIT_FIXTURE_EMAIL = 'idle-security-fixture@users.noreply.github.com';
 
 function createRpcHarness(workingDirectory: string) {
     const handlers = new Map<string, (request: any) => Promise<any>>();
@@ -254,11 +250,10 @@ describe.skipIf(process.platform === 'win32')('common filesystem RPC containment
         await writeFile(join(repository, 'inside.txt'), 'before\n');
         await execFileAsync('git', ['init', '--quiet'], { cwd: repository });
         await execFileAsync('git', ['add', '--', 'inside.txt'], { cwd: repository });
-        const configuredEmail = await configuredGitFixtureEmail();
         await execFileAsync('git', [
             '-c', 'commit.gpgSign=false',
             '-c', 'user.name=Idle Test',
-            '-c', `user.email=${configuredEmail}`,
+            '-c', `user.email=${GIT_FIXTURE_EMAIL}`,
             'commit', '--quiet', '-m', 'fixture',
         ], { cwd: repository });
         await writeFile(join(repository, 'inside.txt'), 'after\n');
@@ -298,11 +293,10 @@ describe.skipIf(process.platform === 'win32')('common filesystem RPC containment
 
         await execFileAsync('git', ['init', '--quiet'], { cwd: workspace });
         await execFileAsync('git', ['add', '--', 'large.txt'], { cwd: workspace });
-        const configuredEmail = await configuredGitFixtureEmail();
         await execFileAsync('git', [
             '-c', 'commit.gpgSign=false',
             '-c', 'user.name=Idle Test',
-            '-c', `user.email=${configuredEmail}`,
+            '-c', `user.email=${GIT_FIXTURE_EMAIL}`,
             'commit', '--quiet', '-m', 'fixture',
         ], { cwd: workspace });
         await writeFile(join(workspace, 'large.txt'), 'y'.repeat(2_048));
@@ -412,11 +406,10 @@ describe.skipIf(process.platform === 'win32')('common filesystem RPC containment
         await writeFile(join(workspace, hostileName), 'before\n');
         await writeFile(join(workspace, alternateHostileName), 'before\n');
         await execFileAsync('git', ['add', '--', normalName, hostileName, alternateHostileName], { cwd: workspace });
-        const configuredEmail = await configuredGitFixtureEmail();
         await execFileAsync('git', [
             '-c', 'commit.gpgSign=false',
             '-c', 'user.name=Idle Test',
-            '-c', `user.email=${configuredEmail}`,
+            '-c', `user.email=${GIT_FIXTURE_EMAIL}`,
             'commit', '--quiet', '-m', 'fixture',
         ], { cwd: workspace });
         await writeFile(join(workspace, normalName), 'after\n');

@@ -232,6 +232,18 @@ test('ordinary CI workflows run with read-only repository permissions', () => {
   );
   assert.match(rootPackage.scripts.test, /workspace idle-app test:export-boundary/);
   assert.match(testAll, /yarn workspace idle-app test:export-boundary/);
+  const cliJobStart = testAll.indexOf('  test-cli:');
+  const appJobStart = testAll.indexOf('  test-app:');
+  const cliJob = testAll.slice(cliJobStart, appJobStart);
+  const ripgrepInstallIndex = cliJob.indexOf('name: Install ripgrep');
+  const cliTestIndex = cliJob.indexOf('name: Test CLI');
+  assert.ok(
+    cliJobStart !== -1
+      && appJobStart > cliJobStart
+      && ripgrepInstallIndex !== -1
+      && ripgrepInstallIndex < cliTestIndex,
+    'CLI CI must install the required system ripgrep before running CLI tests',
+  );
   const hygieneInstallIndex = publicHygiene.indexOf('yarn install --frozen-lockfile');
   const hygieneBoundaryIndex = publicHygiene.indexOf('name: Verify release boundaries');
   assert.ok(

@@ -74,6 +74,11 @@ jobs:
           cache: yarn
           cache-dependency-path: yarn.lock
 
+      - name: Install ripgrep
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes --no-install-recommends ripgrep
+
       - run: yarn install --frozen-lockfile
 
       - name: Build idle-wire (shared types)
