@@ -3,6 +3,7 @@
  */
 
 import { machineBash } from '@/sync/ops';
+import { randomUUID } from 'expo-crypto';
 
 /** Relative path prefix where worktrees are stored inside a repo */
 export const WORKTREE_DIR = '.dev/worktree';
@@ -24,10 +25,14 @@ const nouns = [
     'garden', 'meadow', 'canyon', 'island', 'desert'
 ];
 
-function generateWorktreeName(): string {
-    const adjective = adjectives[Math.floor(Math.random() * adjectives.length)];
-    const noun = nouns[Math.floor(Math.random() * nouns.length)];
-    return `${adjective}-${noun}`;
+export function generateWorktreeName(): string {
+    const entropy = randomUUID().replaceAll('-', '').toLowerCase();
+    if (!/^[0-9a-f]{32}$/.test(entropy)) {
+        throw new Error('Platform cryptographic randomness returned an invalid UUID');
+    }
+    const adjective = adjectives[Number.parseInt(entropy.slice(0, 8), 16) % adjectives.length];
+    const noun = nouns[Number.parseInt(entropy.slice(8, 12), 16) % nouns.length];
+    return `${adjective}-${noun}-${entropy.slice(-8)}`;
 }
 
 // --- Operations ---
