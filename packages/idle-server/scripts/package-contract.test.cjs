@@ -7,6 +7,11 @@ const os = require('node:os');
 const path = require('node:path');
 const test = require('node:test');
 const tar = require('tar');
+const {
+  MAX_WINDOWS_PRISMA_ATTEMPTS,
+  isRetryableWindowsPrismaLock,
+  runPrismaGeneratorWithRetry,
+} = require('./generate-prisma.cjs');
 
 const serverRoot = path.resolve(__dirname, '..');
 const repoRoot = path.resolve(serverRoot, '..', '..');
@@ -197,9 +202,94 @@ test('server postinstall invokes Prisma through Node without a platform shim', (
   assert.match(generator, /mkdtempSync/);
   assert.match(generator, /prisma-json-types-generator/);
   assert.match(generator, /generatorArgs\.push\(['"]--generator=client['"]\)/);
-  assert.match(generator, /spawnSync\(\s*process\.execPath/);
+  assert.match(generator, /spawn\s*=\s*spawnSync/);
+  assert.match(generator, /spawn\(process\.execPath/);
   assert.match(generator, /shell:\s*false/);
+  assert.match(generator, /isRetryableWindowsPrismaLock/);
+  assert.match(generator, /runPrismaGeneratorWithRetry/);
+  assert.match(generator, /MAX_WINDOWS_PRISMA_ATTEMPTS\s*=\s*3/);
+  assert.match(generator, /Atomics\.wait/);
   assert.doesNotMatch(generator, /spawnSync\(['"]prisma(?:\.cmd)?['"]/);
+});
+
+test('server postinstall recognizes only bounded Windows Prisma engine locks as retryable', () => {
+  const locked = {
+    error: undefined,
+    status: 1,
+    stderr: Buffer.from(
+      "Error: EPERM: operation not permitted, rename 'schema-engine-windows.exe.tmp' -> 'schema-engine-windows.exe'",
+    ),
+  };
+
+  assert.equal(isRetryableWindowsPrismaLock(locked, 'win32'), true);
+  assert.equal(isRetryableWindowsPrismaLock(locked, 'linux'), false);
+  assert.equal(
+    isRetryableWindowsPrismaLock(
+      { error: undefined, status: 1, stderr: Buffer.from('Schema validation failed') },
+      'win32',
+    ),
+    false,
+  );
+});
+
+test('server postinstall retries a transient Windows engine lock and suppresses its raw path', () => {
+  const results = [
+    {
+      error: undefined,
+      status: 1,
+      stderr: Buffer.from(
+        "Error: EPERM: rename 'C:\\sensitive\\schema-engine-windows.exe.tmp' -> 'schema-engine-windows.exe'",
+      ),
+    },
+    { error: undefined, status: 0, stderr: Buffer.alloc(0) },
+  ];
+  const delays = [];
+  const output = [];
+
+  const result = runPrismaGeneratorWithRetry({
+    prismaCli: 'prisma-cli.js',
+    generatorArgs: ['generate'],
+    environment: {},
+    platform: 'win32',
+    spawn: () => results.shift(),
+    sleep: delay => delays.push(delay),
+    stderr: { write: value => output.push(String(value)) },
+  });
+
+  assert.equal(result.status, 0);
+  assert.deepEqual(delays, [500]);
+  assert.match(output.join(''), /temporarily locked; retrying client generation \(1\/3\)/);
+  assert.doesNotMatch(output.join(''), /sensitive/);
+});
+
+test('server postinstall bounds Windows engine-lock retries and preserves the final failure', () => {
+  let attempts = 0;
+  const delays = [];
+  const output = [];
+  const failure = {
+    error: undefined,
+    status: 1,
+    stderr: Buffer.from('Error: EBUSY while replacing schema-engine-windows.exe'),
+  };
+
+  const result = runPrismaGeneratorWithRetry({
+    prismaCli: 'prisma-cli.js',
+    generatorArgs: ['generate'],
+    environment: {},
+    platform: 'win32',
+    spawn: () => {
+      attempts += 1;
+      return failure;
+    },
+    sleep: delay => delays.push(delay),
+    stderr: { write: value => output.push(String(value)) },
+  });
+
+  assert.equal(MAX_WINDOWS_PRISMA_ATTEMPTS, 3);
+  assert.equal(attempts, MAX_WINDOWS_PRISMA_ATTEMPTS);
+  assert.deepEqual(delays, [500, 1000]);
+  assert.equal(result.status, 1);
+  assert.match(output.at(-1), /EBUSY/);
 });
 
 test('repository and package licenses use the legal entity name', () => {
