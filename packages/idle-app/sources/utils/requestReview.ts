@@ -25,18 +25,24 @@ const STORE_REVIEW_RETRY_DAYS = 7; // Allow store review again after a week
 const DAY_IN_MS = 24 * 60 * 60 * 1000;
 const lock = new AsyncLock();
 
-export function requestReview() {
+export function requestReview(options: { signal?: AbortSignal } = {}): Promise<void> {
     if (Platform.OS === 'web') {
-        return;
+        return Promise.resolve();
     }
 
-    lock.inLock(async () => {
+    return lock.inLock(async () => {
         try {
+            if (options.signal?.aborted) {
+                return;
+            }
 
             // Check if store review is available
             const isAvailable = await StoreReview.isAvailableAsync();
             if (!isAvailable) {
                 console.log('Store review is not available on this platform');
+                return;
+            }
+            if (options.signal?.aborted) {
                 return;
             }
 
@@ -57,6 +63,9 @@ export function requestReview() {
                     }
                 }
 
+                if (options.signal?.aborted) {
+                    return;
+                }
                 await StoreReview.requestReview();
                 trackReviewStoreShown();
                 localStorage.set(LOCAL_KEYS.STORE_REVIEW_LAST_SHOWN, new Date().toISOString());
@@ -83,6 +92,9 @@ export function requestReview() {
             }
 
             // Pre-ask if they like the app (only shown once, ever)
+            if (options.signal?.aborted) {
+                return;
+            }
             trackReviewPromptShown();
             const likesApp = await Modal.confirm(
                 t('review.enjoyingApp'),
@@ -110,6 +122,9 @@ export function requestReview() {
             }
 
             // Request the actual store review directly
+            if (options.signal?.aborted) {
+                return;
+            }
             await StoreReview.requestReview();
             trackReviewStoreShown();
 

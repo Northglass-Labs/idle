@@ -10,6 +10,8 @@ describe('release simulator testability contract', () => {
         const newSession = source('../app/(app)/new/index.tsx');
         const homeHeader = source('../components/HomeHeader.tsx');
         const mainView = source('../components/MainView.tsx');
+        const agentInput = source('../components/AgentInput.tsx');
+        const composeFlow = source('../../../idle-e2e-mobile/flows/03-compose-message.yaml');
 
         expect(homeHeader).toContain('testID="start-new-session"');
         expect(mainView).toContain('testID="start-new-session"');
@@ -17,6 +19,8 @@ describe('release simulator testability contract', () => {
         expect(newSession).toContain('testID="new-session-agent-picker"');
         expect(newSession).toContain('testID="new-session-prompt"');
         expect(newSession).toContain('testID="new-session-submit"');
+        expect(agentInput).toContain('testID="agent-input-send"');
+        expect(composeFlow).toContain('id: "agent-input-send"');
     });
 
     it('distinguishes live session rows from archived history after relaunch', () => {
@@ -28,6 +32,14 @@ describe('release simulator testability contract', () => {
         expect(compactActiveSessions).toContain('testID="active-session-row"');
         expect(relaunchFlow).toContain('id: "active-session-row"');
         expect(relaunchFlow).not.toContain('id: "session-row"');
+        expect(relaunchFlow).toContain('IDLE-SIM-CLAUDE-FOLLOWUP-OK');
+    });
+
+    it('keeps the Claude release gate multi-turn', () => {
+        const claudeFlow = source('../../../idle-e2e-mobile/flows/15-live-claude-session.yaml');
+
+        expect(claudeFlow).toContain('id: "agent-input-send"');
+        expect(claudeFlow).toContain('IDLE-SIM-CLAUDE-FOLLOWUP-OK');
     });
 
     it('keeps release runs private and recovers only simulator infrastructure failures', () => {

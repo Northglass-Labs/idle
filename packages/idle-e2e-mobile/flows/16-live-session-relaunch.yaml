@@ -11,4 +11,5 @@ appId: ${APP_ID}
     id: "active-session-row"
     index: 0
 - assertVisible: "IDLE-SIM-CLAUDE-OK"
+- assertVisible: "IDLE-SIM-CLAUDE-FOLLOWUP-OK"
 - takeScreenshot: release-session-after-relaunch
