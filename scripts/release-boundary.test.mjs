@@ -271,6 +271,32 @@ test('CLI package smoke avoids multi-gigabyte dependency cache uploads', () => {
   assert.doesNotMatch(workflow, /^\s+cache-dependency-path:/m);
 });
 
+test('CLI package smoke installs only the workspaces it builds and packages', () => {
+  const workflow = read('.github/workflows/cli-smoke-test.yml');
+
+  assert.match(workflow, /node scripts\/select-ci-workspaces\.mjs cli-smoke/g);
+  assert.equal(
+    workflow.match(/node scripts\/select-ci-workspaces\.mjs cli-smoke/g)?.length,
+    2,
+    'Linux and Windows must both remove unrelated mobile workspaces before install',
+  );
+  assert.equal(
+    workflow.match(/yarn install --frozen-lockfile --ignore-scripts/g)?.length,
+    2,
+    'both platforms must avoid unrelated root and package lifecycle scripts',
+  );
+  assert.equal(
+    workflow.match(/yarn workspace @northglass\/idle-server generate/g)?.length,
+    2,
+    'both platforms must explicitly restore the Prisma generation skipped above',
+  );
+  assert.equal(
+    workflow.match(/yarn workspace @northglass\/idle-wire build/g)?.length,
+    2,
+    'both platforms must explicitly build the shared workspace skipped above',
+  );
+});
+
 test('public deploy guides use portable examples, not Northglass operations history', () => {
   const deployDocsDir = path.join(repoRoot, 'docs', 'deploy-targets');
   const docs = fs

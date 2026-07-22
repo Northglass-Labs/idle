@@ -41,11 +41,18 @@ jobs:
       with:
         node-version: ${{ matrix.node-version }}
 
+    - name: Restrict install to packaged CLI workspaces
+      run: node scripts/select-ci-workspaces.mjs cli-smoke
+
     - name: Install dependencies
-      run: yarn install --frozen-lockfile
+      run: yarn install --frozen-lockfile --ignore-scripts
+
+    - name: Generate packaged server client
+      run: yarn workspace @northglass/idle-server generate
 
     - name: Build packages
       run: |
+        yarn workspace @northglass/idle-wire build
         yarn workspace @northglass/idle-server build
         yarn workspace idle-coder build
 
@@ -130,11 +137,18 @@ jobs:
       with:
         node-version: ${{ matrix.node-version }}
 
+    - name: Restrict install to packaged CLI workspaces
+      run: node scripts/select-ci-workspaces.mjs cli-smoke
+
     - name: Install dependencies
-      run: yarn install --frozen-lockfile
+      run: yarn install --frozen-lockfile --ignore-scripts
+
+    - name: Generate packaged server client
+      run: yarn workspace @northglass/idle-server generate
 
     - name: Build packages
       run: |
+        yarn workspace @northglass/idle-wire build
         yarn workspace @northglass/idle-server build
         yarn workspace idle-coder build
 
