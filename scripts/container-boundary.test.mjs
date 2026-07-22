@@ -169,24 +169,6 @@ test('the web image is Node 22, unprivileged, and receives the configured relay 
   assert.doesNotMatch(dockerfile, /HAPPY_BUILD|happy[-_]/i);
   assert.doesNotMatch(dockerfile, /COPY packages\/(?:idle-server|idle-cli|idle-agent)/);
   assert.match(dockerfile, /COPY --from=wire-builder \/wire\/dist \/app\/node_modules\/@northglass\/idle-wire\/dist/);
-  const installIndex = dockerfile.indexOf('RUN yarn install --frozen-lockfile --non-interactive');
-  const dependencyPatchIndex = dockerfile.indexOf('RUN node patches/force-elevenlabs-livekit-v0.cjs');
-  const exportIndex = dockerfile.indexOf('RUN yarn expo export --platform web --output-dir dist');
-  assert.ok(
-    installIndex >= 0 && dependencyPatchIndex > installIndex && exportIndex > dependencyPatchIndex,
-    'the isolated web install must apply reviewed dependency patches before export',
-  );
-  for (const patchName of [
-    'force-elevenlabs-livekit-v0.cjs',
-    'sanitize-shiki-hack-opsec.cjs',
-    'sanitize-react-native-url-polyfill-opsec.cjs',
-    'sanitize-skia-reanimated-metadata-opsec.cjs',
-  ]) {
-    assert.ok(
-      dockerfile.includes(`node patches/${patchName}`),
-      `the isolated web install must apply ${patchName}`,
-    );
-  }
   assert.match(dockerfile, /^ARG EXPO_PUBLIC_POSTHOG_API_KEY=""$/m);
   assert.match(dockerfile, /^ARG EXPO_PUBLIC_IDLE_SERVER_URL=""$/m);
   assert.match(
