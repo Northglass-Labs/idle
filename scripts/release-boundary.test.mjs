@@ -264,6 +264,13 @@ test('Windows CLI package smoke uses native PowerShell path handling', () => {
   assert.match(windowsJob, /Test-Path -LiteralPath \$idle -PathType Leaf/);
 });
 
+test('CLI package smoke avoids multi-gigabyte dependency cache uploads', () => {
+  const workflow = read('.github/workflows/cli-smoke-test.yml');
+
+  assert.doesNotMatch(workflow, /^\s+cache:\s*['"]?yarn['"]?\s*$/m);
+  assert.doesNotMatch(workflow, /^\s+cache-dependency-path:/m);
+});
+
 test('public deploy guides use portable examples, not Northglass operations history', () => {
   const deployDocsDir = path.join(repoRoot, 'docs', 'deploy-targets');
   const docs = fs
