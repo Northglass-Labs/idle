@@ -252,6 +252,7 @@ describe.skipIf(process.platform === 'win32')('common filesystem RPC containment
         await execFileAsync('git', ['add', '--', 'inside.txt'], { cwd: repository });
         await execFileAsync('git', [
             '-c', 'commit.gpgSign=false',
+            '-c', 'core.hooksPath=/dev/null',
             '-c', 'user.name=Idle Test',
             '-c', `user.email=${GIT_FIXTURE_EMAIL}`,
             'commit', '--quiet', '-m', 'fixture',
@@ -295,6 +296,7 @@ describe.skipIf(process.platform === 'win32')('common filesystem RPC containment
         await execFileAsync('git', ['add', '--', 'large.txt'], { cwd: workspace });
         await execFileAsync('git', [
             '-c', 'commit.gpgSign=false',
+            '-c', 'core.hooksPath=/dev/null',
             '-c', 'user.name=Idle Test',
             '-c', `user.email=${GIT_FIXTURE_EMAIL}`,
             'commit', '--quiet', '-m', 'fixture',
@@ -408,6 +410,7 @@ describe.skipIf(process.platform === 'win32')('common filesystem RPC containment
         await execFileAsync('git', ['add', '--', normalName, hostileName, alternateHostileName], { cwd: workspace });
         await execFileAsync('git', [
             '-c', 'commit.gpgSign=false',
+            '-c', 'core.hooksPath=/dev/null',
             '-c', 'user.name=Idle Test',
             '-c', `user.email=${GIT_FIXTURE_EMAIL}`,
             'commit', '--quiet', '-m', 'fixture',
