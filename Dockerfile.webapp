@@ -23,6 +23,10 @@ COPY patches/*.cjs ./patches/
 # resolve a potentially different registry version during the isolated install.
 RUN node -e 'const fs=require("node:fs");const root=JSON.parse(fs.readFileSync("/workspace-package.json","utf8"));const p=JSON.parse(fs.readFileSync("package.json","utf8"));p.resolutions={...root.resolutions,...p.resolutions};delete p.dependencies["@northglass/idle-wire"];fs.writeFileSync("package.json",JSON.stringify(p))'
 RUN yarn install --frozen-lockfile --non-interactive
+RUN node patches/force-elevenlabs-livekit-v0.cjs \
+    && node patches/sanitize-shiki-hack-opsec.cjs \
+    && node patches/sanitize-react-native-url-polyfill-opsec.cjs \
+    && node patches/sanitize-skia-reanimated-metadata-opsec.cjs
 
 COPY --from=wire-builder /wire/package.json /app/node_modules/@northglass/idle-wire/package.json
 COPY --from=wire-builder /wire/dist /app/node_modules/@northglass/idle-wire/dist
