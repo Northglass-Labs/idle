@@ -109,7 +109,7 @@
     "@types/qrcode-terminal": "^0.12.2",
     "@types/react": "^19.2.7",
     "@types/tmp": "^0.2.6",
-    "axios": "^1.15.3",
+    "axios": "^1.18.1",
     "chalk": "^5.6.2",
     "cross-spawn": "^7.0.6",
     "expo-server-sdk": "^3.15.0",

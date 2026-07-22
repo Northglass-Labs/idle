@@ -230,12 +230,61 @@ function repairExistingLogFiles(path: string): void {
   }
 }
 
-function sanitizeLogText(value: string): string {
+const SENSITIVE_TEXT_LABELS = ['prompt', 'content', 'body', 'message', 'title'] as const
+
+function isAsciiWordCharacter(value: string | undefined): boolean {
+  if (!value) return false
+  const code = value.charCodeAt(0)
+  return (code >= 48 && code <= 57)
+    || (code >= 65 && code <= 90)
+    || code === 95
+    || (code >= 97 && code <= 122)
+}
+
+function isInlineWhitespace(value: string | undefined): boolean {
+  return value === ' ' || value === '\t' || value === '\r' || value === '\f' || value === '\v'
+}
+
+function redactSensitiveTextLine(line: string): string {
+  let index = 0
+  while (index < line.length) {
+    if (isAsciiWordCharacter(line[index - 1])) {
+      index += 1
+      continue
+    }
+
+    const lowerTail = line.slice(index, index + 7).toLowerCase()
+    const label = SENSITIVE_TEXT_LABELS.find((candidate) => lowerTail.startsWith(candidate))
+    if (!label || isAsciiWordCharacter(line[index + label.length])) {
+      index += 1
+      continue
+    }
+
+    let cursor = index + label.length
+    while (isInlineWhitespace(line[cursor])) cursor += 1
+    if (line[cursor] === '(') {
+      cursor += 1
+      while (cursor < line.length && line[cursor] !== ')') cursor += 1
+      if (cursor >= line.length) {
+        return `${line.slice(0, index)}${line.slice(index, index + label.length)}=${REDACTED}`
+      }
+      cursor += 1
+      while (isInlineWhitespace(line[cursor])) cursor += 1
+    }
+
+    if (line[cursor] === ':' || line[cursor] === '=') {
+      return `${line.slice(0, index)}${line.slice(index, index + label.length)}=${REDACTED}`
+    }
+    index = Math.max(index + label.length, cursor)
+  }
+  return line
+}
+
+export function sanitizeLogText(value: string): string {
   return value
-    .replace(
-      /\b(prompt|content|body|message|title)\b(?:\s*\([^)]*\))?\s*[:=]\s*.*$/gim,
-      (_match, key: string) => `${key}=${REDACTED}`,
-    )
+    .split('\n')
+    .map(redactSensitiveTextLine)
+    .join('\n')
     .replace(/\bBearer\s+[A-Za-z0-9._~+/=-]+/gi, `Bearer ${REDACTED}`)
     .replace(
       /\b(authorization|cookie|set-cookie|token|secret|password|passphrase|api[_-]?key|private[_-]?key|encryption[_-]?key|credential)\s*[:=]\s*(?:"[^"]*"|'[^']*'|[^\s,}\]]+)/gi,

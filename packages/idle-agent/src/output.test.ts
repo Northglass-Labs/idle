@@ -128,6 +128,14 @@ describe('formatSessionTable', () => {
         expect(output).toContain('\\x1b');
         expect(output).toContain('\\x07');
     });
+
+    it('keeps backticks and backslashes inside one unambiguous Markdown code span', () => {
+        const identifier = 'session\\segment`with``ticks';
+        const output = formatSessionTable([makeSession({ id: identifier })]);
+
+        expect(output).toContain('```session\\segment`with``ticks```');
+        expect(output).not.toContain('\\`');
+    });
 });
 
 describe('formatSessionStatus', () => {

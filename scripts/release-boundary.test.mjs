@@ -221,6 +221,54 @@ test('ordinary CI workflows run with read-only repository permissions', () => {
     read('.github/workflows/public-hygiene.yml'),
     /scripts\/dependency-patch-boundary\.test\.mjs/,
   );
+
+  const testAll = read('.github/workflows/test-all.yml');
+  const publicHygiene = read('.github/workflows/public-hygiene.yml');
+  const rootPackage = JSON.parse(read('package.json'));
+  const appPackage = JSON.parse(read('packages/idle-app/package.json'));
+  assert.equal(
+    appPackage.scripts['test:export-boundary'],
+    'node --test scripts/script-tag-boundary.test.mjs',
+  );
+  assert.match(rootPackage.scripts.test, /workspace idle-app test:export-boundary/);
+  assert.match(testAll, /yarn workspace idle-app test:export-boundary/);
+  const cliJobStart = testAll.indexOf('  test-cli:');
+  const appJobStart = testAll.indexOf('  test-app:');
+  const cliJob = testAll.slice(cliJobStart, appJobStart);
+  const ripgrepInstallIndex = cliJob.indexOf('name: Install ripgrep');
+  const cliTestIndex = cliJob.indexOf('name: Test CLI');
+  assert.ok(
+    cliJobStart !== -1
+      && appJobStart > cliJobStart
+      && ripgrepInstallIndex !== -1
+      && ripgrepInstallIndex < cliTestIndex,
+    'CLI CI must install the required system ripgrep before running CLI tests',
+  );
+  const hygieneInstallIndex = publicHygiene.indexOf('yarn install --frozen-lockfile');
+  const hygieneBoundaryIndex = publicHygiene.indexOf('name: Verify release boundaries');
+  assert.ok(
+    hygieneInstallIndex !== -1 && hygieneInstallIndex < hygieneBoundaryIndex,
+    'dependency-aware hygiene tests must install the pinned dependency graph first',
+  );
+});
+
+test('Windows CLI package smoke uses native PowerShell path handling', () => {
+  const workflow = read('.github/workflows/cli-smoke-test.yml');
+  const windowsJob = workflow.slice(workflow.indexOf('  smoke-test-windows:'));
+
+  assert.doesNotMatch(windowsJob, /shell:\s*cmd/);
+  assert.doesNotMatch(windowsJob, /for %%f|\bhead\s+-/);
+  assert.match(windowsJob, /Get-ChildItem -LiteralPath \$packDir -Filter 'northglass-idle-server-\*\.tgz'/);
+  assert.match(windowsJob, /\$serverPackages\.Count -ne 1/);
+  assert.match(windowsJob, /\$cliPackages\.Count -ne 1/);
+  assert.match(windowsJob, /Test-Path -LiteralPath \$idle -PathType Leaf/);
+});
+
+test('CLI package smoke avoids multi-gigabyte dependency cache uploads', () => {
+  const workflow = read('.github/workflows/cli-smoke-test.yml');
+
+  assert.doesNotMatch(workflow, /^\s+cache:\s*['"]?yarn['"]?\s*$/m);
+  assert.doesNotMatch(workflow, /^\s+cache-dependency-path:/m);
 });
 
 test('public deploy guides use portable examples, not Northglass operations history', () => {

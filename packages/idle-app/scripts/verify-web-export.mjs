@@ -3,6 +3,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
+import { inspectScriptTags } from './script-tag-boundary.mjs';
 import { findUnexpectedUpstreamMarkers } from './web-export-upstream-boundary.mjs';
 
 const exportDirectory = path.resolve(process.cwd(), process.argv[2] ?? 'dist');
@@ -62,11 +63,12 @@ if (htmlContents) {
   );
   expect(/<div\b[^>]*\bid=["']root["'][^>]*>/i.test(html), 'index.html is missing the Expo root');
 
-  const scriptTags = [...html.matchAll(/<script\b[^>]*>[\s\S]*?<\/script>/gi)].map(match => match[0]);
-  expect(scriptTags.length > 0, 'index.html does not load an application script');
-  for (const scriptTag of scriptTags) {
-    expect(/\bsrc=["'][^"']+["']/i.test(scriptTag), 'index.html contains an inline script blocked by the release CSP');
-    expect(!/\btype=["']module["']/i.test(scriptTag), 'Expo SPA scripts unexpectedly changed to module scripts; review the export validator');
+  const scriptInspection = inspectScriptTags(html);
+  expect(scriptInspection.valid, 'index.html contains a malformed or unclosed script element');
+  expect(scriptInspection.tags.length > 0, 'index.html does not load an application script');
+  for (const scriptTag of scriptInspection.tags) {
+    expect(scriptTag.hasSource, 'index.html contains an inline script blocked by the release CSP');
+    expect(!scriptTag.isModule, 'Expo SPA scripts unexpectedly changed to module scripts; review the export validator');
   }
 }
 

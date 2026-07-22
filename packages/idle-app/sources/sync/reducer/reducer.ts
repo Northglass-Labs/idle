@@ -1485,8 +1485,12 @@ export function reducer(state: ReducerState, messages: NormalizedMessage[], agen
 // Helpers
 //
 
+let nextReducerMessageId = 1;
+
 function allocateId() {
-    return Math.random().toString(36).substring(2, 15);
+    const id = `reducer-${nextReducerMessageId.toString(36)}`;
+    nextReducerMessageId += 1;
+    return id;
 }
 
 function processUsageData(state: ReducerState, usage: UsageData, timestamp: number) {

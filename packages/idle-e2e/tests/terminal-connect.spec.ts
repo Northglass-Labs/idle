@@ -95,21 +95,19 @@ test.describe('Terminal Connect Flow', () => {
             }
         });
 
-        // Sign the isolated browser into the same disposable account created by
-        // beforeAll. A terminal grant is an authenticated account operation; an
-        // anonymous direct visit can render the route but cannot approve it.
+        // Sign the isolated browser into the same disposable account through
+        // the real restore UI. Web credentials are deliberately memory-only,
+        // so tests must not seed persistent browser storage as an auth bypass.
         const accountSecret = toBase64url(
             Buffer.from(account.secretKey).toString('base64'),
         );
-        await page.addInitScript(({ token, secret }) => {
-            window.localStorage.setItem(
-                'auth_credentials',
-                JSON.stringify({ token, secret }),
-            );
-        }, {
-            token: account.token,
-            secret: accountSecret,
-        });
+        await page.goto('/restore/manual');
+        await page.getByRole('textbox').fill(accountSecret);
+        const restoreButton = page.locator('[role="button"]', { hasText: /restore account/i });
+        await expect(restoreButton).toBeVisible();
+        await restoreButton.click();
+        await page.waitForURL((url) => url.pathname === '/', { timeout: 10_000 });
+        await expect(page.getByText(/invalid secret key/i)).not.toBeVisible();
 
         // Step 1: CLI generates a curve25519 keypair
         const boxKeypair = tweetnacl.box.keyPair();
@@ -129,9 +127,15 @@ test.describe('Terminal Connect Flow', () => {
         });
         expect(statusResponse.data.status).toBe('pending');
 
-        // Step 3: Web app navigates to the connect page with the key
+        // Step 3: Navigate within the existing SPA so the intentionally
+        // memory-only credentials remain available to the connect route.
         const publicKeyB64url = toBase64url(publicKeyB64);
-        await page.goto(`/terminal/connect#key=${publicKeyB64url}`);
+        const connectPath = `/terminal/connect#key=${publicKeyB64url}`;
+        await page.evaluate((path) => {
+            window.history.pushState({}, '', path);
+            window.dispatchEvent(new PopStateEvent('popstate', { state: window.history.state }));
+        }, connectPath);
+        await page.waitForURL((url) => url.pathname === '/terminal/connect', { timeout: 10_000 });
 
         // Step 4: Look for the "Accept Connection" button and click it.
         // React Native Web renders Pressable with role="button" but Playwright

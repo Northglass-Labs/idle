@@ -4,6 +4,7 @@ import { Platform } from 'react-native';
 const AUTH_KEY = 'auth_credentials';
 const MAX_TOKEN_LENGTH = 16 * 1024;
 const MAX_SECRET_LENGTH = 4 * 1024;
+let webCredentials: AuthCredentials | null = null;
 
 export interface AuthCredentials {
     token: string;
@@ -44,14 +45,21 @@ function serializeCredentials(credentials: AuthCredentials): string {
     return JSON.stringify(credentials);
 }
 
+function removeLegacyWebCredentials(): boolean {
+    if (typeof localStorage === 'undefined') return true;
+    try {
+        localStorage.removeItem(AUTH_KEY);
+        return localStorage.getItem(AUTH_KEY) === null;
+    } catch {
+        return false;
+    }
+}
+
 export const TokenStorage = {
     async getCredentials(): Promise<AuthCredentials | null> {
         if (Platform.OS === 'web') {
-            try {
-                return parseCredentials(localStorage.getItem(AUTH_KEY));
-            } catch {
-                return null;
-            }
+            if (!removeLegacyWebCredentials()) return null;
+            return webCredentials ? { ...webCredentials } : null;
         }
         try {
             const stored = await SecureStore.getItemAsync(AUTH_KEY);
@@ -65,12 +73,11 @@ export const TokenStorage = {
     async setCredentials(credentials: AuthCredentials): Promise<boolean> {
         const json = serializeCredentials(credentials);
         if (Platform.OS === 'web') {
-            try {
-                localStorage.setItem(AUTH_KEY, json);
-                return true;
-            } catch {
-                throw new Error('Web credential storage failed');
+            if (!removeLegacyWebCredentials()) {
+                throw new Error('Legacy web credential cleanup failed');
             }
+            webCredentials = { ...credentials };
+            return true;
         }
         try {
             await SecureStore.setItemAsync(AUTH_KEY, json);
@@ -85,12 +92,8 @@ export const TokenStorage = {
 
     async removeCredentials(): Promise<boolean> {
         if (Platform.OS === 'web') {
-            try {
-                localStorage.removeItem(AUTH_KEY);
-                return true;
-            } catch {
-                return false;
-            }
+            webCredentials = null;
+            return removeLegacyWebCredentials();
         }
         try {
             await SecureStore.deleteItemAsync(AUTH_KEY);

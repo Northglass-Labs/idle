@@ -84,6 +84,7 @@ describe('terminal pairing consent boundary', () => {
         const hook = readSource('hooks/useConnectTerminal.ts');
         const nativeLink = readSource('app/(app)/terminal/index.tsx');
         const webLink = readSource('app/(app)/terminal/connect.tsx');
+        const manualRestore = readSource('app/(app)/restore/manual.tsx');
         const consent = readSource('hooks/terminalPairing.ts');
 
         expect(consent.match(/Modal\.confirm/g)).toHaveLength(1);
@@ -92,6 +93,7 @@ describe('terminal pairing consent boundary', () => {
         expect(hook).toMatch(/onScan:\s*requestTerminalPairing/);
         expect(nativeLink).toMatch(/requestTerminalPairing\(authUrl\)/);
         expect(webLink).toMatch(/requestTerminalPairing\(authUrl\)/);
+        expect(manualRestore).toMatch(/autoCapitalize="none"/);
         expect(nativeLink).not.toMatch(/processAuthUrl/);
         expect(webLink).not.toMatch(/processAuthUrl/);
     });

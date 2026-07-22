@@ -233,10 +233,13 @@ platform unless a custom native build deliberately configures another policy.
 ## Client storage
 
 Native iOS and Android clients use Keychain- and Keystore-backed storage for
-account material. Web storage is accessible to same-origin JavaScript. A
-successful script injection or compromised dependency on the web origin could
-therefore exfiltrate browser-held credentials. Treat the web client as a
-different and generally higher-risk endpoint for sensitive sessions.
+account material. The web client keeps its bearer and account secret in memory
+only, removes the legacy `localStorage` credential record, and requires account
+restore again after a page reload or browser restart. Same-origin JavaScript
+can still access credentials while an authenticated page is running, so a
+successful script injection or compromised dependency could exfiltrate that
+live session. Treat the web client as a different and generally higher-risk
+endpoint for sensitive sessions.
 
 Native clients also bind persisted session replay floors and deletion
 tombstones to an account-specific epoch and ciphertext digest in device-secure

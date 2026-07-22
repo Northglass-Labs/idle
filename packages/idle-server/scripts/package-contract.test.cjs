@@ -20,7 +20,46 @@ const upstreamLicenseNotice = 'Copyright (c) 2026 Happy Coder Contributors';
 const readJson = file => JSON.parse(fs.readFileSync(file, 'utf8'));
 const read = file => fs.readFileSync(file, 'utf8');
 
-const npmBin = process.platform === 'win32' ? 'npm.cmd' : 'npm';
+function resolveNpmInvocation({
+  env = process.env,
+  execPath = process.execPath,
+  existsSync = fs.existsSync,
+  platform = process.platform,
+} = {}) {
+  const pathApi = platform === 'win32' ? path.win32 : path;
+  const lifecycleCli = env.npm_execpath;
+  const candidates = [
+    typeof lifecycleCli === 'string'
+      && pathApi.basename(lifecycleCli).toLowerCase() === 'npm-cli.js'
+      ? lifecycleCli
+      : null,
+    pathApi.join(pathApi.dirname(execPath), 'node_modules', 'npm', 'bin', 'npm-cli.js'),
+  ].filter(Boolean);
+  const npmCli = candidates.find(candidate => existsSync(candidate));
+
+  if (npmCli) {
+    return { file: execPath, args: [npmCli] };
+  }
+  if (platform === 'win32') {
+    throw new Error('Unable to locate npm-cli.js for shell-free package inspection on Windows');
+  }
+  return { file: 'npm', args: [] };
+}
+
+test('npm package inspection executes the npm JavaScript CLI through Node on Windows', () => {
+  const npmCli = 'C:\\node\\node_modules\\npm\\bin\\npm-cli.js';
+  const invocation = resolveNpmInvocation({
+    env: { npm_execpath: npmCli },
+    execPath: 'C:\\node\\node.exe',
+    existsSync: candidate => candidate === npmCli,
+    platform: 'win32',
+  });
+
+  assert.deepEqual(invocation, {
+    args: [npmCli],
+    file: 'C:\\node\\node.exe',
+  });
+});
 
 function listFiles(root, current = root) {
   const files = [];
@@ -46,7 +85,9 @@ async function packAndExtract(packageRoot, tempRoot, label) {
       delete packEnv[key];
     }
   }
-  const output = execFileSync(npmBin, [
+  const npm = resolveNpmInvocation();
+  const output = execFileSync(npm.file, [
+    ...npm.args,
     'pack',
     '--ignore-scripts',
     '--json',
@@ -143,6 +184,24 @@ test('embedded database adapter stays on the Prisma 6 compatible line', () => {
   assert.equal(serverPackage.dependencies['pglite-prisma-adapter'], '0.6.1');
 });
 
+test('server postinstall invokes Prisma through Node without a platform shim', () => {
+  assert.equal(serverPackage.scripts.generate, 'prisma generate --schema=prisma/schema.prisma');
+  assert.equal(serverPackage.scripts.postinstall, 'node scripts/generate-prisma.cjs');
+  assert.ok(serverPackage.files.includes('scripts/generate-prisma.cjs'));
+  assert.equal(serverPackage.dependencies['prisma-json-types-generator'], undefined);
+  assert.equal(serverPackage.devDependencies['prisma-json-types-generator'], '^3.5.1');
+
+  const generator = read(path.join(serverRoot, 'scripts', 'generate-prisma.cjs'));
+  assert.match(generator, /require\.resolve\(['"]prisma\/build\/index\.js['"]/);
+  assert.match(generator, /resolveOptional\(['"]prisma-json-types-generator\/index\.js['"]\)/);
+  assert.match(generator, /mkdtempSync/);
+  assert.match(generator, /prisma-json-types-generator/);
+  assert.match(generator, /generatorArgs\.push\(['"]--generator=client['"]\)/);
+  assert.match(generator, /spawnSync\(\s*process\.execPath/);
+  assert.match(generator, /shell:\s*false/);
+  assert.doesNotMatch(generator, /spawnSync\(['"]prisma(?:\.cmd)?['"]/);
+});
+
 test('repository and package licenses use the legal entity name', () => {
   for (const licensePath of [
     path.join(repoRoot, 'LICENSE'),
@@ -173,6 +232,7 @@ test('server package is a publishable Northglass runtime with a strict allowlist
     'prisma/migrations',
     'prisma/schema.prisma',
     'README.md',
+    'scripts/generate-prisma.cjs',
   ]);
 });
 
@@ -354,6 +414,7 @@ test('actual npm tarballs contain licenses and no private build artifacts', asyn
     'package.json',
     /^prisma\/migrations\/(?:[^/]+\/migration\.sql|migration_lock\.toml)$/,
     'prisma/schema.prisma',
+    'scripts/generate-prisma.cjs',
   ], 'server');
   assertOnlyAllowedPaths(agent.files, [
     'LICENSE',

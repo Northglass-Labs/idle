@@ -27,36 +27,34 @@ function createMockStorage(): Storage {
 }
 
 describe('TokenStorage', () => {
-    beforeEach(() => {
+    beforeEach(async () => {
         vi.clearAllMocks();
         mocks.platform.OS = 'web';
         Object.defineProperty(globalThis, 'localStorage', {
             configurable: true,
             value: createMockStorage(),
         });
+        await TokenStorage.removeCredentials();
     });
 
-    it('round-trips and removes web credentials through the production implementation', async () => {
+    it('keeps web credentials in memory without writing browser persistence', async () => {
         const credentials = { token: 'synthetic-token', secret: 'synthetic-secret' };
 
         await expect(TokenStorage.setCredentials(credentials)).resolves.toBe(true);
         await expect(TokenStorage.getCredentials()).resolves.toEqual(credentials);
+        expect(localStorage.length).toBe(0);
         await expect(TokenStorage.removeCredentials()).resolves.toBe(true);
         await expect(TokenStorage.getCredentials()).resolves.toBeNull();
     });
 
-    it('fails closed for malformed or structurally invalid web credentials', async () => {
-        localStorage.setItem('auth_credentials', '{invalid-json');
-        await expect(TokenStorage.getCredentials()).resolves.toBeNull();
+    it('removes legacy persisted web credentials instead of loading them', async () => {
+        localStorage.setItem('auth_credentials', JSON.stringify({
+            token: 'legacy-token',
+            secret: 'legacy-secret',
+        }));
 
-        localStorage.setItem('auth_credentials', JSON.stringify({ token: 'only-a-token' }));
         await expect(TokenStorage.getCredentials()).resolves.toBeNull();
-
-        localStorage.setItem('auth_credentials', JSON.stringify({ token: '', secret: 'value' }));
-        await expect(TokenStorage.getCredentials()).resolves.toBeNull();
-
-        localStorage.setItem('auth_credentials', JSON.stringify({ token: 'x'.repeat(20_000), secret: 'value' }));
-        await expect(TokenStorage.getCredentials()).resolves.toBeNull();
+        expect(localStorage.getItem('auth_credentials')).toBeNull();
     });
 
     it('rejects invalid runtime values before writing them', async () => {
