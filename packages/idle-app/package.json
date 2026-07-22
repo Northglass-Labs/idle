@@ -76,7 +76,7 @@
     "@types/qrcode": "^1.5.5",
     "@types/resolve-path": "^1.4.3",
     "@uiw/react-codemirror": "^4.25.9",
-    "axios": "^1.15.3",
+    "axios": "^1.18.1",
     "color": "^5.0.0",
     "diff": "^8.0.2",
     "expo": "~55.0.27",

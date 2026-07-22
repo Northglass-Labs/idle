@@ -209,6 +209,7 @@ describe('server runtime master-secret file boundary', () => {
         const environment = createServerChildEnvironment({
             IDLE_MASTER_SECRET: 'b7'.repeat(32),
             IDLE_MASTER_SECRET_FILE: '/tmp/stale-source',
+            IDLE_AUTH_AUDIENCE: 'https://stale-audience.example.test',
             SAFE_VALUE: 'retained',
         }, {
             dataDir,
@@ -226,6 +227,7 @@ describe('server runtime master-secret file boundary', () => {
         }
         expect(environment.IDLE_MASTER_SECRET).toBeUndefined();
         expect(environment.IDLE_MASTER_SECRET_FILE).toBe(secretFile);
+        expect(environment.IDLE_AUTH_AUDIENCE).toBe('http://127.0.0.1:3005');
         expect(environment.SAFE_VALUE).toBe('retained');
         const source = readFileSync(path.join(process.cwd(), 'src/commands/server.ts'), 'utf8');
         expect(source).not.toContain('.master-secret.runtime.');

@@ -481,6 +481,7 @@ export function createServerChildEnvironment(
     environment.DATA_DIR = options.dataDir;
     environment.PGLITE_DIR = options.pgliteDir;
     environment.IDLE_MASTER_SECRET_FILE = options.secretFile;
+    environment.IDLE_AUTH_AUDIENCE = options.serverUrl;
     environment.PORT = String(options.port);
     environment.HOST = options.host;
     if (options.staticDir) environment.IDLE_STATIC_DIR = options.staticDir;
