@@ -152,8 +152,11 @@ test('server postinstall invokes Prisma through Node without a platform shim', (
 
   const generator = read(path.join(serverRoot, 'scripts', 'generate-prisma.cjs'));
   assert.match(generator, /require\.resolve\(['"]prisma\/build\/index\.js['"]/);
+  assert.match(generator, /resolveOptional\(['"]prisma-json-types-generator\/index\.js['"]\)/);
+  assert.match(generator, /mkdtempSync/);
+  assert.match(generator, /prisma-json-types-generator/);
+  assert.match(generator, /generatorArgs\.push\(['"]--generator=client['"]\)/);
   assert.match(generator, /spawnSync\(\s*process\.execPath/);
-  assert.match(generator, /['"]--generator=client['"]/);
   assert.match(generator, /shell:\s*false/);
   assert.doesNotMatch(generator, /spawnSync\(['"]prisma(?:\.cmd)?['"]/);
 });
