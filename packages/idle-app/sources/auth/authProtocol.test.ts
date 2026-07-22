@@ -10,7 +10,11 @@ const mocks = vi.hoisted(() => ({ post: vi.fn() }));
 vi.mock('expo-crypto', () => ({
     getRandomBytes: (size: number) => new Uint8Array(require('node:crypto').randomBytes(size)),
 }));
-vi.mock('@/encryption/libsodium.lib', () => ({ default: require('libsodium-wrappers') }));
+vi.mock('@/encryption/libsodium.lib', async () => {
+    const { default: sodium } = await import('libsodium-wrappers');
+    await sodium.ready;
+    return { default: sodium };
+});
 vi.mock('axios', () => ({ default: { post: mocks.post } }));
 vi.mock('@/sync/serverConfig', () => ({ getServerUrl: () => 'https://idle.test' }));
 vi.mock('@/sync/apiSocket', () => ({ getIdleClientId: () => 'app/test' }));
