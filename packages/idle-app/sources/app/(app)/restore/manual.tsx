@@ -121,7 +121,10 @@ export default function Restore() {
                         placeholderTextColor={theme.colors.input.placeholder}
                         value={restoreKey}
                         onChangeText={setRestoreKey}
-                        autoCapitalize="characters"
+                        // Backup keys are uppercase Base32, but the restore
+                        // boundary also accepts case-sensitive Base64URL. Do
+                        // not let mobile browsers rewrite pasted key bytes.
+                        autoCapitalize="none"
                         autoCorrect={false}
                         multiline={true}
                         numberOfLines={4}

@@ -8,6 +8,20 @@ import { encodeBase64, decodeBase64 } from '@/encryption/base64';
 
 // Base32 alphabet (RFC 4648) - excludes confusing characters
 const BASE32_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+const BASE64URL_SECRET_PATTERN = /^[A-Za-z0-9_-]{43}$/;
+
+function parseCanonicalBase64UrlSecret(value: string): string | null {
+    if (!BASE64URL_SECRET_PATTERN.test(value)) return null;
+    try {
+        const bytes = decodeBase64(value, 'base64url');
+        if (bytes.length !== 32 || encodeBase64(bytes, 'base64url') !== value) {
+            return null;
+        }
+        return value;
+    } catch {
+        return null;
+    }
+}
 
 function bytesToBase32(bytes: Uint8Array): string {
     let result = '';
@@ -136,15 +150,11 @@ export function parseBackupSecretKey(formattedKey: string): string {
  * @returns true if valid, false otherwise
  */
 export function isValidSecretKey(key: string): boolean {
+    const trimmed = key.trim();
+    if (parseCanonicalBase64UrlSecret(trimmed)) return true;
     try {
-        // Try parsing as formatted key first
-        if (key.includes('-')) {
-            const parsed = parseBackupSecretKey(key);
-            return decodeBase64(parsed, 'base64url').length === 32;
-        }
-
-        // Try as base64url
-        return decodeBase64(key, 'base64url').length === 32;
+        const parsed = parseBackupSecretKey(trimmed);
+        return decodeBase64(parsed, 'base64url').length === 32;
     } catch {
         return false;
     }
@@ -158,22 +168,10 @@ export function isValidSecretKey(key: string): boolean {
 export function normalizeSecretKey(key: string): string {
     // Trim whitespace
     const trimmed = key.trim();
+    const base64UrlSecret = parseCanonicalBase64UrlSecret(trimmed);
+    if (base64UrlSecret) return base64UrlSecret;
 
-    // Check if it looks like a formatted key (contains dashes or spaces between groups)
-    // or has been typed with spaces/formatting
-    if (/[-\s]/.test(trimmed) || trimmed.length > 50) {
-        return parseBackupSecretKey(trimmed);
-    }
-
-    // Otherwise try to parse as base64url
-    try {
-        const bytes = decodeBase64(trimmed, 'base64url');
-        if (bytes.length !== 32) {
-            throw new Error('Invalid secret key');
-        }
-        return trimmed;
-    } catch (error) {
-        // If base64 parsing fails, try parsing as formatted key anyway
-        return parseBackupSecretKey(trimmed);
-    }
+    // Base64URL uses '-' as data, so only fall back to the forgiving Base32
+    // parser after the complete canonical Base64URL form has been rejected.
+    return parseBackupSecretKey(trimmed);
 }

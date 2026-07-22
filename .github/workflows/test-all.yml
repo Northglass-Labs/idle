@@ -107,6 +107,9 @@ jobs:
       - name: Test app
         run: yarn workspace idle-app test
 
+      - name: Test web export boundary
+        run: yarn workspace idle-app test:export-boundary
+
   test-agent:
     needs: test-wire
     runs-on: ubuntu-latest

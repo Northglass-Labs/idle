@@ -10,6 +10,7 @@
     "eas": "npx --yes eas-cli@20.5.1",
     "web": "expo start --web",
     "test": "vitest",
+    "test:export-boundary": "node --test scripts/script-tag-boundary.test.mjs",
     "prebuild": "rm -rf android ios && expo prebuild",
     "changelog:generate": "tsx sources/scripts/parseChangelog.ts",
     "typecheck": "tsc --noEmit",

@@ -422,7 +422,7 @@ describe('voice relay agent trust boundary', () => {
             if (url.includes('/conversations?')) {
                 return jsonResponse({ conversations: [conversationSummary(3_600)], has_more: false });
             }
-            if (url.includes('api.revenuecat.com')) {
+            if (new URL(url).hostname === 'api.revenuecat.com') {
                 return jsonResponse({
                     object: 'list',
                     items: [{

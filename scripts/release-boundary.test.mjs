@@ -221,6 +221,16 @@ test('ordinary CI workflows run with read-only repository permissions', () => {
     read('.github/workflows/public-hygiene.yml'),
     /scripts\/dependency-patch-boundary\.test\.mjs/,
   );
+
+  const testAll = read('.github/workflows/test-all.yml');
+  const rootPackage = JSON.parse(read('package.json'));
+  const appPackage = JSON.parse(read('packages/idle-app/package.json'));
+  assert.equal(
+    appPackage.scripts['test:export-boundary'],
+    'node --test scripts/script-tag-boundary.test.mjs',
+  );
+  assert.match(rootPackage.scripts.test, /workspace idle-app test:export-boundary/);
+  assert.match(testAll, /yarn workspace idle-app test:export-boundary/);
 });
 
 test('public deploy guides use portable examples, not Northglass operations history', () => {

@@ -59,15 +59,55 @@ const RequestDownloadResultSchema = z.object({
 
 type AttachmentTransferKind = 'upload-post' | 'upload-put' | 'download';
 
-const TRUSTED_OBJECT_STORAGE_HOSTS = [
-    /^(?:[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?\.)?s3(?:[.-][a-z0-9-]+)*\.amazonaws\.com$/,
-    /^(?:[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?\.)?storage\.googleapis\.com$/,
-    /^[a-z0-9-]+\.r2\.cloudflarestorage\.com$/,
-    /^[a-z0-9-]+\.blob\.core\.windows\.net$/,
-    /^(?:[a-z0-9-]+\.){1,2}digitaloceanspaces\.com$/,
-    /^s3[.-][a-z0-9-]+\.backblazeb2\.com$/,
-    /^(?:[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?\.)?s3[.-][a-z0-9-]+\.wasabisys\.com$/,
-];
+function isValidDnsLabel(label: string): boolean {
+    if (label.length === 0 || label.length > 63) return false;
+    for (let index = 0; index < label.length; index += 1) {
+        const code = label.charCodeAt(index);
+        const alphaNumeric = (code >= 48 && code <= 57)
+            || (code >= 97 && code <= 122);
+        if (!alphaNumeric && code !== 45) return false;
+        if (code === 45 && (index === 0 || index === label.length - 1)) return false;
+    }
+    return true;
+}
+
+function hasDnsSuffix(labels: string[], suffix: readonly string[]): boolean {
+    if (labels.length < suffix.length) return false;
+    const offset = labels.length - suffix.length;
+    return suffix.every((label, index) => labels[offset + index] === label);
+}
+
+function hasTerminalS3Region(labels: string[]): boolean {
+    const last = labels.at(-1);
+    if (last?.startsWith('s3-') && last.length > 3) return true;
+    return labels.length >= 2 && labels.at(-2) === 's3';
+}
+
+export function isTrustedObjectStorageHostname(hostname: string): boolean {
+    const normalized = hostname.toLowerCase();
+    if (normalized.length === 0 || normalized.length > 253) return false;
+    const labels = normalized.split('.');
+    if (!labels.every(isValidDnsLabel)) return false;
+
+    if (hasDnsSuffix(labels, ['amazonaws', 'com'])) {
+        const providerLabels = labels.slice(0, -2);
+        return providerLabels.some((label) => label === 's3'
+            || (label.startsWith('s3-') && label.length > 3));
+    }
+    if (hasDnsSuffix(labels, ['storage', 'googleapis', 'com'])) return true;
+    if (labels.length === 4 && hasDnsSuffix(labels, ['r2', 'cloudflarestorage', 'com'])) return true;
+    if (labels.length === 5 && hasDnsSuffix(labels, ['blob', 'core', 'windows', 'net'])) return true;
+    if ((labels.length === 3 || labels.length === 4)
+        && hasDnsSuffix(labels, ['digitaloceanspaces', 'com'])) return true;
+    if (hasDnsSuffix(labels, ['backblazeb2', 'com'])) {
+        const providerLabels = labels.slice(0, -2);
+        return providerLabels.length <= 2 && hasTerminalS3Region(providerLabels);
+    }
+    if (hasDnsSuffix(labels, ['wasabisys', 'com'])) {
+        return hasTerminalS3Region(labels.slice(0, -2));
+    }
+    return false;
+}
 
 function validateAttachmentTransferUrl(
     value: string,
@@ -87,7 +127,7 @@ function validateAttachmentTransferUrl(
     const trustedObjectStorage = parsed.protocol === 'https:'
         && parsed.port === ''
         && parsed.hash === ''
-        && TRUSTED_OBJECT_STORAGE_HOSTS.some((pattern) => pattern.test(parsed.hostname.toLowerCase()));
+        && isTrustedObjectStorageHostname(parsed.hostname);
     if (!trustedObjectStorage || kind === 'upload-put') {
         throw new Error('Attachment transfer URL is not permitted');
     }

@@ -120,6 +120,12 @@ describe('secretKeyBackup', () => {
             expect(isValidSecretKey(formatted)).toBe(true);
         });
 
+        it('should validate base64url keys containing URL-safe punctuation', () => {
+            const punctuationKey = encodeBase64(new Uint8Array(32).fill(251), 'base64url');
+            expect(punctuationKey).toContain('-');
+            expect(isValidSecretKey(punctuationKey)).toBe(true);
+        });
+
         it('should reject invalid base64url keys', () => {
             expect(isValidSecretKey('invalid!')).toBe(false);
             expect(isValidSecretKey('')).toBe(false);
@@ -147,6 +153,12 @@ describe('secretKeyBackup', () => {
         it('should convert formatted key to base64url', () => {
             const formatted = formatSecretKeyForBackup(testSecretBase64);
             expect(normalizeSecretKey(formatted)).toBe(testSecretBase64);
+        });
+
+        it('should not misclassify URL-safe dashes as Base32 formatting', () => {
+            const punctuationKey = encodeBase64(new Uint8Array(32).fill(251), 'base64url');
+            expect(punctuationKey).toContain('-');
+            expect(normalizeSecretKey(punctuationKey)).toBe(punctuationKey);
         });
 
         it('should throw for invalid keys', () => {

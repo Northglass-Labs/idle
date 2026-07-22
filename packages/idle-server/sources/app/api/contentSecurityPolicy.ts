@@ -9,9 +9,16 @@ export const API_CONTENT_SECURITY_POLICY = [
 ].join('; ');
 
 function inlineScriptHash(scriptTag: string): string {
-    const match = scriptTag.match(/^<script>([\s\S]*)<\/script>$/);
-    if (!match) throw new Error('Injected web configuration must be one inline script');
-    return createHash('sha256').update(match[1], 'utf8').digest('base64');
+    const openingTag = '<script>';
+    const closingTag = '</script>';
+    if (!scriptTag.startsWith(openingTag) || !scriptTag.endsWith(closingTag)) {
+        throw new Error('Injected web configuration must be one inline script');
+    }
+    const source = scriptTag.slice(openingTag.length, -closingTag.length);
+    if (source.includes(openingTag) || source.includes(closingTag)) {
+        throw new Error('Injected web configuration must be one inline script');
+    }
+    return createHash('sha256').update(source, 'utf8').digest('base64');
 }
 
 export function createWebContentSecurityPolicy(injectScript: string | null): string {

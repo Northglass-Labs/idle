@@ -256,22 +256,113 @@ function decodeStaticStringLiteral(literal) {
   return decoded;
 }
 
+function isSourceWhitespace(character) {
+  return character === ' '
+    || character === '\t'
+    || character === '\n'
+    || character === '\r'
+    || character === '\f'
+    || character === '\v';
+}
+
+function skipSourceWhitespace(value, cursor, limit) {
+  while (cursor < limit && isSourceWhitespace(value[cursor])) cursor += 1;
+  return cursor;
+}
+
+function staticStringLiteralAt(value, cursor, limit) {
+  const quote = value[cursor];
+  if (quote !== '"' && quote !== "'") return null;
+  const start = cursor;
+  cursor += 1;
+  while (cursor < limit) {
+    if (value[cursor] === quote) {
+      return { end: cursor + 1, raw: value.slice(start, cursor + 1) };
+    }
+    if (value[cursor] === '\\') {
+      cursor += 2;
+      continue;
+    }
+    cursor += 1;
+  }
+  return null;
+}
+
+function consumeSourceCall(value, cursor, limit, name) {
+  if (!value.startsWith(name, cursor)) return null;
+  cursor = skipSourceWhitespace(value, cursor + name.length, limit);
+  if (value[cursor] !== '(') return null;
+  cursor = skipSourceWhitespace(value, cursor + 1, limit);
+  if (value[cursor] !== ')') return null;
+  return cursor + 1;
+}
+
+function staticLiteralReconstructionAt(value, start) {
+  const itemByteLimit = 16 * 1024;
+  const limit = Math.min(value.length, start + itemByteLimit + 1024);
+  const items = [];
+  let cursor = start + 1;
+  const itemsStart = cursor;
+
+  while (cursor < limit) {
+    cursor = skipSourceWhitespace(value, cursor, limit);
+    if (value[cursor] === ']') break;
+    const literal = staticStringLiteralAt(value, cursor, limit);
+    if (!literal) return null;
+    const decoded = decodeStaticStringLiteral(literal.raw);
+    if (decoded === null) return null;
+    items.push(decoded);
+    if (items.length > 128) return null;
+    cursor = skipSourceWhitespace(value, literal.end, limit);
+    if (value[cursor] === ',') cursor += 1;
+  }
+
+  if (items.length === 0 || value[cursor] !== ']' || cursor - itemsStart > itemByteLimit) return null;
+  cursor = skipSourceWhitespace(value, cursor + 1, limit);
+  if (value[cursor] !== '.') return null;
+  cursor = skipSourceWhitespace(value, cursor + 1, limit);
+
+  let reverse = false;
+  for (const method of ['toReversed', 'reverse']) {
+    const afterCall = consumeSourceCall(value, cursor, limit, method);
+    if (afterCall === null) continue;
+    reverse = true;
+    cursor = skipSourceWhitespace(value, afterCall, limit);
+    if (value[cursor] !== '.') return null;
+    cursor = skipSourceWhitespace(value, cursor + 1, limit);
+    break;
+  }
+
+  if (!value.startsWith('join', cursor)) return null;
+  cursor = skipSourceWhitespace(value, cursor + 4, limit);
+  if (value[cursor] !== '(') return null;
+  cursor = skipSourceWhitespace(value, cursor + 1, limit);
+  const separatorLiteral = staticStringLiteralAt(value, cursor, limit);
+  if (!separatorLiteral) return null;
+  const separator = decodeStaticStringLiteral(separatorLiteral.raw);
+  if (separator === null) return null;
+  cursor = skipSourceWhitespace(value, separatorLiteral.end, limit);
+  if (value[cursor] !== ')') return null;
+
+  if (reverse) items.reverse();
+  const reconstruction = items.join(separator);
+  if (reconstruction.length > itemByteLimit) return null;
+  return { end: cursor + 1, reconstruction };
+}
+
 function staticLiteralReconstructions(value) {
   const reconstructions = [];
-  const expressionPattern = /\[((?:\s*(?:"(?:\\[\s\S]|[^"\\])*"|'(?:\\[\s\S]|[^'\\])*')\s*,?)+)\]\s*\.\s*(?:(reverse|toReversed)\s*\(\s*\)\s*\.\s*)?join\s*\(\s*((?:"(?:\\[\s\S]|[^"\\])*"|'(?:\\[\s\S]|[^'\\])*'))\s*\)/g;
-  const literalPattern = /"(?:\\[\s\S]|[^"\\])*"|'(?:\\[\s\S]|[^'\\])*'/g;
-  let match;
-  while ((match = expressionPattern.exec(value)) !== null && reconstructions.length < 256) {
-    if (match[1].length > 16 * 1024) continue;
-    const rawItems = match[1].match(literalPattern) ?? [];
-    if (rawItems.length === 0 || rawItems.length > 128) continue;
-    if (!/^[\s,]*$/.test(match[1].replace(literalPattern, ''))) continue;
-    const items = rawItems.map(decodeStaticStringLiteral);
-    const separator = decodeStaticStringLiteral(match[3]);
-    if (items.some(item => item === null) || separator === null) continue;
-    if (match[2]) items.reverse();
-    const reconstruction = items.join(separator);
-    if (reconstruction.length <= 16 * 1024) reconstructions.push(reconstruction);
+  let cursor = 0;
+  while (reconstructions.length < 256) {
+    const start = value.indexOf('[', cursor);
+    if (start === -1) break;
+    const parsed = staticLiteralReconstructionAt(value, start);
+    if (parsed) {
+      reconstructions.push(parsed.reconstruction);
+      cursor = parsed.end;
+    } else {
+      cursor = start + 1;
+    }
   }
   return reconstructions;
 }

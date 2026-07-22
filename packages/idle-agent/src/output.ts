@@ -72,8 +72,25 @@ function formatLastActive(ts: number): string {
 }
 
 function toMarkdownInline(value: string): string {
-    const escaped = escapeTerminalControls(value).replace(/`/g, '\\`');
-    return `\`${escaped}\``;
+    const escaped = escapeTerminalControls(value);
+    let longestBacktickRun = 0;
+    let currentBacktickRun = 0;
+    for (const character of escaped) {
+        if (character === '`') {
+            currentBacktickRun += 1;
+            longestBacktickRun = Math.max(longestBacktickRun, currentBacktickRun);
+        } else {
+            currentBacktickRun = 0;
+        }
+    }
+
+    const delimiter = '`'.repeat(longestBacktickRun + 1);
+    const needsPadding = escaped.startsWith('`')
+        || escaped.endsWith('`')
+        || escaped.startsWith(' ')
+        || escaped.endsWith(' ');
+    const content = needsPadding ? ` ${escaped} ` : escaped;
+    return `${delimiter}${content}${delimiter}`;
 }
 
 function normalizeCodeBlockText(value: string): string {

@@ -27,7 +27,7 @@ describe('buildMermaidWebViewHtml — defends against WebView isolation WebView 
         });
         // Two LEGITIMATE <script> tags in our wrapper: <script src="...mermaid..."> + <script> for IIFE.
         // The injected <script>...</script> from the payload must NOT add a third one.
-        const scriptOpenCount = (html.match(/<script[> ]/g) || []).length;
+        const scriptOpenCount = html.split('<script').length - 1;
         expect(scriptOpenCount).toBe(2); // 1 CDN <script src= …> + 1 IIFE <script>; no injected third.
         expect(html).not.toContain('fetch("https://evil.com');
         // Verify the escaped form. JSON.stringify leaves `<` and `>` alone; our extra replace

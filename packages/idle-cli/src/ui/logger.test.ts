@@ -13,7 +13,7 @@ import {
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { rmSync } from 'node:fs';
-import { isPrivateLogTarget, Logger } from './logger';
+import { isPrivateLogTarget, Logger, sanitizeLogText } from './logger';
 
 const tempDirs: string[] = [];
 const originalDebug = process.env.DEBUG;
@@ -198,5 +198,19 @@ describe.runIf(process.platform !== 'win32')('Logger file permissions', () => {
 
     expect(statSync(logPath).size).toBeLessThanOrEqual(10 * 1024 * 1024);
     expect(readFileSync(logPath, 'utf8')).toContain('newest safe event');
+  });
+});
+
+describe('Logger redaction algorithm', () => {
+  it('redacts labeled content without polynomial work on adversarial spacing', () => {
+    const adversarial = `prefix prompt${' '.repeat(100_000)}x`;
+    const startedAt = performance.now();
+
+    expect(sanitizeLogText(adversarial)).toBe(adversarial);
+    expect(performance.now() - startedAt).toBeLessThan(250);
+    expect(sanitizeLogText('provider message (stream): private payload'))
+      .toBe('provider message=[REDACTED]');
+    expect(sanitizeLogText('provider prompt (unterminated private payload'))
+      .toBe('provider prompt=[REDACTED]');
   });
 });

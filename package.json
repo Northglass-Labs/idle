@@ -24,7 +24,7 @@
         "env:down": "tsx environments/environments.ts down",
         "env:tailscale": "tsx environments/environments.ts tailscale",
         "typecheck": "yarn workspace @northglass/idle-wire build && yarn workspace idle-coder typecheck && yarn workspace @northglass/agent typecheck && yarn workspace idle-app typecheck && yarn workspace @northglass/idle-server build && yarn workspace idle-e2e typecheck",
-        "test": "yarn workspace @northglass/idle-wire test && yarn workspace idle-coder test:unit && yarn workspace @northglass/idle-server test && yarn workspace @northglass/agent test && yarn workspace idle-app test --run",
+        "test": "yarn workspace @northglass/idle-wire test && yarn workspace idle-coder test:unit && yarn workspace @northglass/idle-server test && yarn workspace @northglass/agent test && yarn workspace idle-app test --run && yarn workspace idle-app test:export-boundary",
         "test:e2e": "yarn workspace idle-e2e test",
         "verify:upstream-import": "node scripts/verify-upstream-import.mjs"
     },

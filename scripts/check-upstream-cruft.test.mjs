@@ -14,11 +14,12 @@ const upstreamFetch = '+refs/heads/main:refs/remotes/upstream/main';
 const upstreamStoreId = ['571505', '6748'].reverse().join('');
 const upstreamStoreSlug = ['app', 'coder', 'idle'].reverse().join('-');
 
-function run(cwd, args = []) {
+function run(cwd, args = [], options = {}) {
   return spawnSync('bash', [guard, ...args], {
     cwd,
     encoding: 'utf8',
     env: { ...process.env, LC_ALL: 'C' },
+    timeout: options.timeout,
   });
 }
 
@@ -127,6 +128,15 @@ test('diagnostics report paths without reproducing matched source text', () => {
     assert.notEqual(result.status, 0);
     assert.match(output, /src\/leak\.ts/);
     assert.doesNotMatch(output, /PRIVATE_MARKER/);
+  });
+});
+
+test('static literal reconstruction remains bounded on a hostile unmatched array', () => {
+  const hostileSource = `export const value = [${'"" '.repeat(20_000)}unterminated;\n`;
+  withRepo({ 'src/hostile.ts': hostileSource }, (root) => {
+    const result = run(root, [], { timeout: 5_000 });
+    assert.notEqual(result.error?.code, 'ETIMEDOUT', 'upstream scan exceeded its CPU budget');
+    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
   });
 });
 

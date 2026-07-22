@@ -1,5 +1,5 @@
 import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
-import { ApiSessionClient } from './apiSession';
+import { ApiSessionClient, isTrustedObjectStorageHostname } from './apiSession';
 import { mkdirSync, rmSync } from 'node:fs';
 
 const {
@@ -88,6 +88,35 @@ function createClient(): ApiSessionClient {
         encryptionVariant: 'legacy',
     });
 }
+
+describe('object storage hostname policy', () => {
+    it('matches supported S3 endpoints in linear time and rejects hostile lookalikes', () => {
+        expect(isTrustedObjectStorageHostname('bucket.s3.us-east-1.amazonaws.com')).toBe(true);
+        expect(isTrustedObjectStorageHostname('s3-us-west-2.amazonaws.com')).toBe(true);
+
+        const hostile = `s3-${'-'.repeat(16_000)}.amazonaws.com.attacker.invalid`;
+        const startedAt = performance.now();
+        expect(isTrustedObjectStorageHostname(hostile)).toBe(false);
+        expect(performance.now() - startedAt).toBeLessThan(250);
+    });
+
+    it('accepts supported providers only at valid DNS label boundaries', () => {
+        for (const hostname of [
+            'bucket.storage.googleapis.com',
+            'account.r2.cloudflarestorage.com',
+            'container.blob.core.windows.net',
+            'bucket.nyc3.digitaloceanspaces.com',
+            's3.us-west-004.backblazeb2.com',
+            'bucket.s3.eu-central-1.wasabisys.com',
+        ]) {
+            expect(isTrustedObjectStorageHostname(hostname)).toBe(true);
+        }
+
+        expect(isTrustedObjectStorageHostname('bucket..storage.googleapis.com')).toBe(false);
+        expect(isTrustedObjectStorageHostname('bucket..s3.eu-central-1.wasabisys.com')).toBe(false);
+        expect(isTrustedObjectStorageHostname('-account.r2.cloudflarestorage.com')).toBe(false);
+    });
+});
 
 describe('attachment transfer URL policy', () => {
     beforeEach(() => {
