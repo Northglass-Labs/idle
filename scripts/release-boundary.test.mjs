@@ -223,6 +223,7 @@ test('ordinary CI workflows run with read-only repository permissions', () => {
   );
 
   const testAll = read('.github/workflows/test-all.yml');
+  const publicHygiene = read('.github/workflows/public-hygiene.yml');
   const rootPackage = JSON.parse(read('package.json'));
   const appPackage = JSON.parse(read('packages/idle-app/package.json'));
   assert.equal(
@@ -231,6 +232,12 @@ test('ordinary CI workflows run with read-only repository permissions', () => {
   );
   assert.match(rootPackage.scripts.test, /workspace idle-app test:export-boundary/);
   assert.match(testAll, /yarn workspace idle-app test:export-boundary/);
+  const hygieneInstallIndex = publicHygiene.indexOf('yarn install --frozen-lockfile');
+  const hygieneBoundaryIndex = publicHygiene.indexOf('name: Verify release boundaries');
+  assert.ok(
+    hygieneInstallIndex !== -1 && hygieneInstallIndex < hygieneBoundaryIndex,
+    'dependency-aware hygiene tests must install the pinned dependency graph first',
+  );
 });
 
 test('public deploy guides use portable examples, not Northglass operations history', () => {
