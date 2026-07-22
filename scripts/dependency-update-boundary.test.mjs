@@ -25,3 +25,21 @@ test('development tooling stays above known vulnerable transitive versions', () 
   assert.equal(manifest.resolutions['**/eslint/ajv'], '6.14.0');
   assert.equal(manifest.resolutions['**/@eslint/eslintrc/ajv'], '6.14.0');
 });
+
+test('dependency policy stays at or above every reviewed advisory fix', () => {
+  const manifest = JSON.parse(fs.readFileSync(path.join(repoRoot, 'package.json'), 'utf8'));
+  const appManifest = JSON.parse(
+    fs.readFileSync(path.join(repoRoot, 'packages/idle-app/package.json'), 'utf8'),
+  );
+  const serverManifest = JSON.parse(
+    fs.readFileSync(path.join(repoRoot, 'packages/idle-server/package.json'), 'utf8'),
+  );
+
+  assert.equal(manifest.resolutions['@hono/node-server'], '^2.0.5');
+  assert.equal(manifest.resolutions['body-parser'], '^2.3.0');
+  assert.equal(manifest.resolutions.dompurify, '^3.4.12');
+  assert.equal(manifest.resolutions['fast-uri'], '^3.1.4');
+  assert.equal(manifest.resolutions['fast-xml-parser'], '^5.10.1');
+  assert.equal(appManifest.devDependencies.sharp, '^0.35.0');
+  assert.equal(serverManifest.dependencies.sharp, '^0.35.0');
+});
