@@ -143,6 +143,21 @@ test('embedded database adapter stays on the Prisma 6 compatible line', () => {
   assert.equal(serverPackage.dependencies['pglite-prisma-adapter'], '0.6.1');
 });
 
+test('server postinstall invokes Prisma through Node without a platform shim', () => {
+  assert.equal(serverPackage.scripts.generate, 'prisma generate --schema=prisma/schema.prisma');
+  assert.equal(serverPackage.scripts.postinstall, 'node scripts/generate-prisma.cjs');
+  assert.ok(serverPackage.files.includes('scripts/generate-prisma.cjs'));
+  assert.equal(serverPackage.dependencies['prisma-json-types-generator'], undefined);
+  assert.equal(serverPackage.devDependencies['prisma-json-types-generator'], '^3.5.1');
+
+  const generator = read(path.join(serverRoot, 'scripts', 'generate-prisma.cjs'));
+  assert.match(generator, /require\.resolve\(['"]prisma\/build\/index\.js['"]/);
+  assert.match(generator, /spawnSync\(\s*process\.execPath/);
+  assert.match(generator, /['"]--generator=client['"]/);
+  assert.match(generator, /shell:\s*false/);
+  assert.doesNotMatch(generator, /spawnSync\(['"]prisma(?:\.cmd)?['"]/);
+});
+
 test('repository and package licenses use the legal entity name', () => {
   for (const licensePath of [
     path.join(repoRoot, 'LICENSE'),
@@ -173,6 +188,7 @@ test('server package is a publishable Northglass runtime with a strict allowlist
     'prisma/migrations',
     'prisma/schema.prisma',
     'README.md',
+    'scripts/generate-prisma.cjs',
   ]);
 });
 
@@ -354,6 +370,7 @@ test('actual npm tarballs contain licenses and no private build artifacts', asyn
     'package.json',
     /^prisma\/migrations\/(?:[^/]+\/migration\.sql|migration_lock\.toml)$/,
     'prisma/schema.prisma',
+    'scripts/generate-prisma.cjs',
   ], 'server');
   assertOnlyAllowedPaths(agent.files, [
     'LICENSE',
