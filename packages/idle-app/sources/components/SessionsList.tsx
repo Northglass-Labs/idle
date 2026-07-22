@@ -248,10 +248,12 @@ export function SessionsList() {
 
     // Request review
     React.useEffect(() => {
-        if (data && data.length > 0) {
-            requestReview();
+        const controller = new AbortController();
+        if (pathname === '/' && data && data.length > 0) {
+            void requestReview({ signal: controller.signal });
         }
-    }, [data && data.length > 0]);
+        return () => controller.abort();
+    }, [data && data.length > 0, pathname]);
 
     // Early return if no data yet
     if (!data) {

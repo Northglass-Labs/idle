@@ -554,7 +554,10 @@ export async function runClaude(credentials: Credentials, options: StartOptions 
     const messageQueue = new MessageQueue2<EnhancedMode>(mode => hashObject({
         isPlan: mode.permissionMode === 'plan',
         model: mode.model,
-        requestId: mode.requestId,
+        // requestId correlates an individual authenticated turn; it does not
+        // change the Claude runtime. Hashing it forces every follow-up down
+        // the SDK restart path, where an already-completed query can remain
+        // alive and strand the next prompt in the queue.
         fallbackModel: mode.fallbackModel,
         customSystemPrompt: mode.customSystemPrompt,
         appendSystemPrompt: mode.appendSystemPrompt,

@@ -316,6 +316,32 @@ describe('runClaude remote JSONL scanner', () => {
         await harness.finish();
     });
 
+    it('does not treat per-turn sender IDs as Claude runtime configuration changes', async () => {
+        const harness = await startRemoteRunClaudeHarness();
+        const userMessageHandler = harness.sessionClient.onUserMessage.mock.calls[0][0];
+
+        for (const [text, messageId] of [
+            ['First turn', 'sender-owned-request-1'],
+            ['Follow-up turn', 'sender-owned-request-2'],
+        ] as const) {
+            await userMessageHandler({
+                role: 'user',
+                content: { type: 'text', text },
+                meta: {},
+                messageIdentity: {
+                    v: 1,
+                    sessionId: 'idle-session-1',
+                    messageId,
+                },
+            });
+        }
+
+        const [first, followUp] = harness.loopOptions.messageQueue.queue;
+        expect(first.mode.requestId).not.toBe(followUp.mode.requestId);
+        expect(first.modeHash).toBe(followUp.modeHash);
+        await harness.finish();
+    });
+
     afterEach(() => {
         for (const [event, listeners] of originalListeners) {
             process.removeAllListeners(event as any);

@@ -229,10 +229,12 @@ export function SessionGroupedList() {
     }, [items, pathname, selectable]);
 
     React.useEffect(() => {
-        if (items && items.length > 0) {
-            requestReview();
+        const controller = new AbortController();
+        if (pathname === '/' && items && items.length > 0) {
+            void requestReview({ signal: controller.signal });
         }
-    }, [items && items.length > 0]);
+        return () => controller.abort();
+    }, [items && items.length > 0, pathname]);
 
     if (!items) {
         return <View style={styles.container} />;

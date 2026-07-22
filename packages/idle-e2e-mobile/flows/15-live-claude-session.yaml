@@ -21,3 +21,12 @@ appId: ${APP_ID}
     visible: "IDLE-SIM-CLAUDE-OK"
     timeout: 60000
 - takeScreenshot: release-claude-round-trip
+- tapOn:
+    id: "agent-input-text"
+- inputText: "Reply with exactly: IDLE-SIM-CLAUDE-FOLLOWUP-OK"
+- tapOn:
+    id: "agent-input-send"
+- extendedWaitUntil:
+    visible: "IDLE-SIM-CLAUDE-FOLLOWUP-OK"
+    timeout: 60000
+- takeScreenshot: release-claude-followup-round-trip

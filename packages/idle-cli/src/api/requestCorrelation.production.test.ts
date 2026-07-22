@@ -17,12 +17,13 @@ describe('remote request correlation production wiring', () => {
         expect(implementation).toContain('setActiveRequestId(null)');
     });
 
-    it('Claude carries the authenticated ID through its queue and remote SDK lifecycle', async () => {
+    it('Claude correlates each authenticated turn without treating its ID as runtime configuration', async () => {
         const orchestration = await source('../claude/runClaude.ts');
         const launcher = await source('../claude/claudeRemoteLauncher.ts');
 
         expect(orchestration).toContain('message.messageIdentity?.messageId');
-        expect(orchestration).toContain('requestId: mode.requestId');
+        expect(orchestration).toContain('requestId,');
+        expect(orchestration).not.toContain('requestId: mode.requestId');
         expect(launcher).toContain('setActiveRequestId(mode.requestId ?? null)');
         expect(launcher).toContain('setActiveRequestId(null)');
     });

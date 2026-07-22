@@ -93,9 +93,10 @@ the small set of supported environment variables.
 - `13-lab-subscreen.yaml`: lab settings navigation
 - `14-live-codex-session.yaml`: live Codex response, including conditional
   native-sandbox consent
-- `15-live-claude-session.yaml`: live Claude response
+- `15-live-claude-session.yaml`: live Claude response plus a second turn in
+  the same provider session
 - `16-live-session-relaunch.yaml`: terminate, relaunch, and verify the newest
-  Claude transcript remains available
+  Claude transcript retains both turns
 
 ## Release-candidate integration pass
 
@@ -110,11 +111,14 @@ bundle identifier, transport policy, and update channel.
 
 ```bash
 export PATH="$(brew --prefix node@22)/bin:$PATH"
+export APP_ENV=production
 export IDLE_SIMULATOR_UDID="<booted-simulator-udid>"
 : "${RUN_ROOT:?set RUN_ROOT to an owner-only directory outside the checkout}"
 
+yarn install --frozen-lockfile
+yarn workspace @northglass/idle-wire build
 cd packages/idle-app
-APP_ENV=production npx expo prebuild --platform ios --clean
+npx expo prebuild --platform ios --clean
 test -d ios/Idle.xcworkspace
 xcodebuild \
   -workspace ios/Idle.xcworkspace \
@@ -126,6 +130,12 @@ xcodebuild \
   ONLY_ACTIVE_ARCH=YES \
   build
 ```
+
+Install dependencies inside the reviewed checkout before prebuild. Do not
+reuse or symlink `node_modules` from another checkout: Metro resolves real
+paths during the production bundle phase and the resulting native project is
+no longer a self-contained release proof. Build Wire before prebuild so the
+native bundle consumes the generated protocol package from the same checkout.
 
 A clean Release build can take 10–15 minutes on an Apple-silicon development
 Mac and may be quiet for long stretches. Treat the final `xcodebuild` status
@@ -156,7 +166,12 @@ Every live-flow entry point independently requires `IDLE_RELEASE_LIVE_TEST=1`;
 calling the lower-level authenticated runner cannot bypass that guard.
 The relaunch flow targets `active-session-row`, which is deliberately distinct
 from archived `session-row` history so repeated runs cannot open an older
-transcript by accident.
+transcript by accident. The Claude flow sends two prompts through the same
+session using the stable `agent-input-send` selector, and the relaunch flow
+requires both responses to remain visible. This catches provider adapters that
+work for session creation but strand follow-up turns. Review prompts are
+cancelled when navigation leaves the sessions route so they cannot interrupt
+the new-session release flow.
 
 The runner performs a SpringBoard readiness check, stores Maestro screenshots
 and debug output in an owner-only per-run directory, and retries at most once

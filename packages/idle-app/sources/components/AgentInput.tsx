@@ -1379,6 +1379,9 @@ export const AgentInput = React.memo(React.forwardRef<MultiTextInputHandle, Agen
                                     ]}
                                 >
                                     <Pressable
+                                        testID="agent-input-send"
+                                        accessibilityRole="button"
+                                        accessibilityLabel={hasText || !props.onMicPress ? 'Send message' : 'Start voice input'}
                                         style={(p) => ({
                                             width: '100%',
                                             height: '100%',
