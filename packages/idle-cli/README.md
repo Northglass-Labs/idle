@@ -113,7 +113,10 @@ idle server
 owner-only secret file on first use, and gives the relay only that validated
 file path—not a plaintext secret environment value. The CLI discards inherited
 master-secret variables and asks before changing its default server setting. It
-binds to loopback unless another host is explicitly selected.
+binds to loopback unless another host is explicitly selected. The command also
+supplies the selected local authentication audience automatically. Direct relay
+deployments must set `IDLE_AUTH_AUDIENCE` explicitly; the server fails closed
+when that value is missing.
 
 ## Authentication and provider credentials
 
