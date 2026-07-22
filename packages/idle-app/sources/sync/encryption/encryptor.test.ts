@@ -4,7 +4,11 @@ import sodium from 'libsodium-wrappers';
 vi.mock('expo-crypto', () => ({
     getRandomBytes: (size: number) => new Uint8Array(require('node:crypto').randomBytes(size)),
 }));
-vi.mock('@/encryption/libsodium.lib', () => ({ default: require('libsodium-wrappers') }));
+vi.mock('@/encryption/libsodium.lib', async () => {
+    const { default: sodium } = await import('libsodium-wrappers');
+    await sodium.ready;
+    return { default: sodium };
+});
 // Native AES is exercised through adapter tests in aes.test.ts. The encryptor
 // contract can run headlessly against the wire-compatible Web Crypto backend.
 vi.mock('@/encryption/aes', async () => await import('@/encryption/aes.web'));

@@ -10,9 +10,10 @@ vi.mock('expo-crypto', () => ({
 }));
 
 // Mock the libsodium.lib import to use the Node.js libsodium-wrappers
-vi.mock('@/encryption/libsodium.lib', () => {
-    const s = require('libsodium-wrappers');
-    return { default: s };
+vi.mock('@/encryption/libsodium.lib', async () => {
+    const { default: sodium } = await import('libsodium-wrappers');
+    await sodium.ready;
+    return { default: sodium };
 });
 
 import { encryptBlob, decryptBlob } from './blob';
