@@ -59,7 +59,7 @@
         "defu": "^6.1.5",
         "dompurify": "^3.4.12",
         "engine.io": "^6.6.9",
-        "fast-uri": "^3.1.4",
+        "fast-uri": "^3.1.5",
         "fast-xml-parser": "^5.10.1",
         "flatted": "3.4.2",
         "follow-redirects": "^1.16.0",
