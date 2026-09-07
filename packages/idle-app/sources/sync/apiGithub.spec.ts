@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { disconnectGitHub, getAccountProfile } from './apiGithub';
+import { deleteAccount } from './apiAccount';
 import { AuthCredentials } from '@/auth/tokenStorage';
 
 // Mock the serverConfig
@@ -92,6 +93,33 @@ describe('apiGithub', () => {
 
             await expect(disconnectGitHub(mockCredentials))
                 .rejects.toThrow('Failed to disconnect GitHub: 500');
+        });
+    });
+
+    describe('deleteAccount', () => {
+        it('sends parseable JSON to the authenticated deletion endpoint', async () => {
+            const requests: Request[] = [];
+            global.fetch = vi.fn(async (url, init) => {
+                const request = new Request(url, init);
+                requests.push(request);
+                // The relay parses JSON before entering the route. A JSON
+                // content type with an empty body fails that boundary.
+                await request.json();
+                return jsonResponse({ success: true });
+            });
+
+            await expect(deleteAccount(mockCredentials)).resolves.toBeUndefined();
+            expect(requests).toHaveLength(1);
+            expect(requests[0].url).toBe('https://api.test.com/v1/account/delete');
+            expect(requests[0].method).toBe('POST');
+            expect(requests[0].headers.get('authorization')).toBe('Bearer test-token');
+        });
+
+        it('rejects unsuccessful deletion without exposing the response body', async () => {
+            global.fetch = vi.fn(async () => new Response('private server detail', { status: 503 }));
+            const failure = await deleteAccount(mockCredentials).catch(error => error);
+            expect(failure.message).toBe('Failed to delete account: 503');
+            expect(failure.message).not.toContain('private server detail');
         });
     });
 
