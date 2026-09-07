@@ -26,7 +26,8 @@ RUN yarn install --frozen-lockfile --non-interactive
 RUN node patches/force-elevenlabs-livekit-v0.cjs \
     && node patches/sanitize-shiki-hack-opsec.cjs \
     && node patches/sanitize-react-native-url-polyfill-opsec.cjs \
-    && node patches/sanitize-skia-reanimated-metadata-opsec.cjs
+    && node patches/sanitize-skia-reanimated-metadata-opsec.cjs \
+    && node patches/bound-malformed-uri-decoding.cjs
 
 COPY --from=wire-builder /wire/package.json /app/node_modules/@northglass/idle-wire/package.json
 COPY --from=wire-builder /wire/dist /app/node_modules/@northglass/idle-wire/dist

@@ -3,6 +3,7 @@ const { applyElevenLabsLiveKitV0Patch } = require('../patches/force-elevenlabs-l
 const { applyShikiHackOpsecPatch } = require('../patches/sanitize-shiki-hack-opsec.cjs');
 const { applyUrlPolyfillOpsecPatch } = require('../patches/sanitize-react-native-url-polyfill-opsec.cjs');
 const { applySkiaReanimatedOpsecPatch } = require('../patches/sanitize-skia-reanimated-metadata-opsec.cjs');
+const { applyMalformedUriDecodingPatch } = require('../patches/bound-malformed-uri-decoding.cjs');
 
 // EAS installs the monorepo from its root and runs only this lifecycle script.
 // Apply the app's version-bound patch-package fixes here as well so native
@@ -15,6 +16,7 @@ applyElevenLabsLiveKitV0Patch();
 applyShikiHackOpsecPatch();
 applyUrlPolyfillOpsecPatch();
 applySkiaReanimatedOpsecPatch();
+applyMalformedUriDecodingPatch();
 
 if (process.env.SKIP_IDLE_WIRE_BUILD === '1') {
   console.log('[postinstall] SKIP_IDLE_WIRE_BUILD=1, skipping @northglass/idle-wire build');
