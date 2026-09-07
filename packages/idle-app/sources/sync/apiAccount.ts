@@ -17,6 +17,7 @@ export async function deleteAccount(credentials: AuthCredentials): Promise<void>
             'Authorization': `Bearer ${credentials.token}`,
             'Content-Type': 'application/json',
         },
+        body: JSON.stringify({}),
     });
     if (!response.ok) {
         throw new Error(`Failed to delete account: ${response.status}`);
