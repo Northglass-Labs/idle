@@ -289,7 +289,7 @@ test('the production web CSP does not trust the native Mermaid CDN', () => {
 
   assert.doesNotMatch(nginx, /(?:cdn|fastly)\.jsdelivr\.net/);
   assert.match(renderer, /Platform\.OS === 'web'[\s\S]*?import\('mermaid'\)/);
-  assert.match(nativeDocument, /https:\/\/cdn\.jsdelivr\.net\/npm\/mermaid@11\.16\.0\/dist\/mermaid\.min\.js/);
+  assert.match(nativeDocument, /https:\/\/cdn\.jsdelivr\.net\/npm\/mermaid@11\.16\.1\/dist\/mermaid\.min\.js/);
   assert.match(nativeDocument, /integrity="sha384-[A-Za-z0-9+/=]+"/);
   assert.match(nativeDocument, /worker-src 'none'/);
 });
