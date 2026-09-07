@@ -98,8 +98,9 @@ export default function Restore() {
             // Login with new credentials
             await auth.login(token, normalizedKey);
 
-            // Dismiss
-            router.back();
+            // Leave both restore screens so the old pairing request cannot
+            // keep running after manual authentication has completed.
+            router.dismissTo('/');
 
         } catch (error) {
             console.error('Manual restore failed');

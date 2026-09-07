@@ -45,7 +45,7 @@ RUN yarn expo export --platform web --output-dir dist \
     && node scripts/verify-web-export.mjs dist
 
 # Stage 3: runtime with Nginx
-FROM nginx:alpine-slim@sha256:8763397d71453fccb4a2613ccfd89aa62e1d731d618b1eaa8e14631539a3a65b AS runner
+FROM nginx:alpine-slim@sha256:3b171d7224b669faa3cc2137fea0a65301791df1ec1f271ebd2a2b7461f7fade AS runner
 
 COPY --from=builder /app/dist /usr/share/nginx/html
 
