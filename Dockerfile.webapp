@@ -1,5 +1,5 @@
 # Stage 1: build the exact wire package without installing unrelated workspaces.
-FROM node:22-alpine@sha256:16e22a550f3863206a3f701448c45f7912c6896a62de43add43bb9c86130c3e2 AS wire-builder
+FROM node:22-alpine@sha256:0a7108bf6c7bf5de370ffb1a3ed6be93d405b43ff159f681a8d18c0e2bc2e402 AS wire-builder
 
 WORKDIR /wire
 COPY package.json /workspace-package.json
@@ -11,7 +11,7 @@ COPY packages/idle-wire ./
 RUN yarn build
 
 # Stage 2: install and export only the Expo application.
-FROM node:22-alpine@sha256:16e22a550f3863206a3f701448c45f7912c6896a62de43add43bb9c86130c3e2 AS builder
+FROM node:22-alpine@sha256:0a7108bf6c7bf5de370ffb1a3ed6be93d405b43ff159f681a8d18c0e2bc2e402 AS builder
 
 WORKDIR /app
 COPY package.json /workspace-package.json
@@ -45,7 +45,7 @@ RUN yarn expo export --platform web --output-dir dist \
     && node scripts/verify-web-export.mjs dist
 
 # Stage 3: runtime with Nginx
-FROM nginx:alpine-slim@sha256:3b171d7224b669faa3cc2137fea0a65301791df1ec1f271ebd2a2b7461f7fade AS runner
+FROM nginx:alpine-slim@sha256:f761b94f2cb9e8e05e2943d5f773609596113ef69b54e2433a996d109a8f78b7 AS runner
 
 COPY --from=builder /app/dist /usr/share/nginx/html
 
