@@ -37,8 +37,8 @@ test('dependency policy stays at or above every reviewed advisory fix', () => {
 
   assert.equal(manifest.resolutions['@hono/node-server'], '^2.0.5');
   assert.equal(manifest.resolutions['body-parser'], '^2.3.0');
-  assert.equal(manifest.resolutions.dompurify, '^3.4.12');
-  assert.equal(manifest.resolutions['fast-uri'], '^3.1.4');
+  assert.equal(manifest.resolutions.dompurify, '^3.4.13');
+  assert.equal(manifest.resolutions['fast-uri'], '^3.1.6');
   assert.equal(manifest.resolutions['fast-xml-parser'], '^5.10.1');
   assert.equal(appManifest.devDependencies.sharp, '^0.35.0');
   assert.equal(serverManifest.dependencies.sharp, '^0.35.0');
