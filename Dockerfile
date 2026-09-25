@@ -2,7 +2,7 @@
 # Uses PGlite (embedded Postgres), local filesystem storage, no Redis
 
 # Stage 1: build the shared wire package without installing unrelated workspaces.
-FROM node:22-trixie-slim@sha256:e6d9a389d34ff9678438af985c9913fbd1eb6ed36e80fea56644f4b4f6dd70ba AS wire-builder
+FROM node:22-trixie-slim@sha256:b26b04c123d9ff8ab646ceb18b9d75a1173acf64b9a401094b906d27b29338d4 AS wire-builder
 
 WORKDIR /wire
 COPY package.json /workspace-package.json
@@ -14,7 +14,7 @@ COPY packages/idle-wire ./
 RUN yarn build
 
 # Stage 2: build and type-check the relay in an isolated package install.
-FROM node:22-trixie-slim@sha256:e6d9a389d34ff9678438af985c9913fbd1eb6ed36e80fea56644f4b4f6dd70ba AS builder
+FROM node:22-trixie-slim@sha256:b26b04c123d9ff8ab646ceb18b9d75a1173acf64b9a401094b906d27b29338d4 AS builder
 
 RUN apt-get update && apt-get install -y --no-install-recommends python3 make g++ \
     && rm -rf /var/lib/apt/lists/*
@@ -36,7 +36,7 @@ RUN yarn build
 # Stage 3: install only the relay's production dependencies. Keeping this out
 # of the monorepo workspace prevents the mobile/web dependency graph from being
 # copied into the production relay image.
-FROM node:22-trixie-slim@sha256:e6d9a389d34ff9678438af985c9913fbd1eb6ed36e80fea56644f4b4f6dd70ba AS production-deps
+FROM node:22-trixie-slim@sha256:b26b04c123d9ff8ab646ceb18b9d75a1173acf64b9a401094b906d27b29338d4 AS production-deps
 
 WORKDIR /runtime
 
@@ -60,12 +60,15 @@ COPY --from=builder /build/node_modules/.prisma /runtime/node_modules/.prisma
 COPY --from=builder /build/node_modules/@prisma/client /runtime/node_modules/@prisma/client
 
 # Stage 4: minimal, non-root runtime
-FROM node:22-trixie-slim@sha256:e6d9a389d34ff9678438af985c9913fbd1eb6ed36e80fea56644f4b4f6dd70ba AS runner
+FROM node:22-trixie-slim@sha256:b26b04c123d9ff8ab646ceb18b9d75a1173acf64b9a401094b906d27b29338d4 AS runner
 
 WORKDIR /repo
 
 # Prisma's native query engine needs the supported OpenSSL runtime. Keep this
 # dependency while leaving unused transfer and media tools out of the image.
+RUN apt-get update && apt-get upgrade -y --no-install-recommends \
+    && rm -rf /var/lib/apt/lists/*
+
 RUN apt-get update && apt-get install -y --no-install-recommends openssl \
     && rm -rf /var/lib/apt/lists/*
 
