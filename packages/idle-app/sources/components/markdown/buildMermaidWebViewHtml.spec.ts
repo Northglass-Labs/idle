@@ -107,15 +107,15 @@ describe('buildMermaidWebViewHtml — defends against WebView isolation WebView 
 
     it('pins and integrity-checks the CDN runtime', () => {
         const html = buildMermaidWebViewHtml({ content: 'graph TD; A-->B', backgroundColor: '#000' });
-        expect(html).toContain('mermaid@11.16.0/dist/mermaid.min.js');
-        expect(html).toContain('integrity="sha384-T/0lMUdJpd2S1ZHtRiofG3htU3xPCrFVeAQ1UUE2TJwlEJSV5NUwn30kP28n238E"');
+        expect(html).toContain('mermaid@11.17.2/dist/mermaid.min.js');
+        expect(html).toContain('integrity="sha384-EOXBFmc3gx5mb+vn0vPvvGqACToJD24hhacX5Yx+8NUUQrHIle/Qi5Bg9o3zKwW2"');
         expect(html).not.toContain('mermaid@11/dist');
     });
 
     it('blocks diagram-controlled network, frame, form, and navigation sinks with CSP', () => {
         const html = buildMermaidWebViewHtml({ content: 'graph TD; A-->B', backgroundColor: '#000' });
         expect(html).toContain("default-src 'none'");
-        expect(html).toContain("script-src 'unsafe-inline' https://cdn.jsdelivr.net/npm/mermaid@11.16.0/dist/mermaid.min.js");
+        expect(html).toContain("script-src 'unsafe-inline' https://cdn.jsdelivr.net/npm/mermaid@11.17.2/dist/mermaid.min.js");
         expect(html).toContain("img-src data:");
         expect(html).toContain("connect-src 'none'");
         expect(html).toContain("frame-src 'none'");

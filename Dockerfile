@@ -2,7 +2,7 @@
 # Uses PGlite (embedded Postgres), local filesystem storage, no Redis
 
 # Stage 1: build the shared wire package without installing unrelated workspaces.
-FROM node:22-trixie-slim@sha256:e6d9a389d34ff9678438af985c9913fbd1eb6ed36e80fea56644f4b4f6dd70ba AS wire-builder
+FROM node:22-alpine@sha256:0a7108bf6c7bf5de370ffb1a3ed6be93d405b43ff159f681a8d18c0e2bc2e402 AS wire-builder
 
 WORKDIR /wire
 COPY package.json /workspace-package.json
@@ -14,10 +14,9 @@ COPY packages/idle-wire ./
 RUN yarn build
 
 # Stage 2: build and type-check the relay in an isolated package install.
-FROM node:22-trixie-slim@sha256:e6d9a389d34ff9678438af985c9913fbd1eb6ed36e80fea56644f4b4f6dd70ba AS builder
+FROM node:22-alpine@sha256:0a7108bf6c7bf5de370ffb1a3ed6be93d405b43ff159f681a8d18c0e2bc2e402 AS builder
 
-RUN apt-get update && apt-get install -y --no-install-recommends python3 make g++ \
-    && rm -rf /var/lib/apt/lists/*
+RUN apk add --no-cache python3 make g++
 WORKDIR /build
 
 COPY package.json /workspace-package.json
@@ -36,7 +35,7 @@ RUN yarn build
 # Stage 3: install only the relay's production dependencies. Keeping this out
 # of the monorepo workspace prevents the mobile/web dependency graph from being
 # copied into the production relay image.
-FROM node:22-trixie-slim@sha256:e6d9a389d34ff9678438af985c9913fbd1eb6ed36e80fea56644f4b4f6dd70ba AS production-deps
+FROM node:22-alpine@sha256:0a7108bf6c7bf5de370ffb1a3ed6be93d405b43ff159f681a8d18c0e2bc2e402 AS production-deps
 
 WORKDIR /runtime
 
@@ -60,18 +59,17 @@ COPY --from=builder /build/node_modules/.prisma /runtime/node_modules/.prisma
 COPY --from=builder /build/node_modules/@prisma/client /runtime/node_modules/@prisma/client
 
 # Stage 4: minimal, non-root runtime
-FROM node:22-trixie-slim@sha256:e6d9a389d34ff9678438af985c9913fbd1eb6ed36e80fea56644f4b4f6dd70ba AS runner
+FROM node:22-alpine@sha256:0a7108bf6c7bf5de370ffb1a3ed6be93d405b43ff159f681a8d18c0e2bc2e402 AS runner
 
 WORKDIR /repo
 
-# Prisma's native query engine needs the supported OpenSSL runtime. Keep this
-# dependency while leaving unused transfer and media tools out of the image.
-RUN apt-get update && apt-get install -y --no-install-recommends openssl \
-    && rm -rf /var/lib/apt/lists/*
+# Prisma's native query engine needs the supported OpenSSL runtime. This is the
+# only package added to the base runtime image.
+RUN apk add --no-cache openssl
 
-# The runtime executes prebuilt JavaScript only. Remove package-manager
-# toolchains inherited from the build-oriented Node image so their dependency
-# trees are not shipped as an unnecessary attack surface.
+# The runtime executes prebuilt JavaScript only. Remove the JavaScript package
+# managers inherited from the Node image so their dependency trees are not
+# shipped as an unnecessary attack surface.
 RUN rm -rf /usr/local/lib/node_modules/npm /usr/local/lib/node_modules/corepack /opt/yarn-v1.22.22 \
     && rm -f /usr/local/bin/npm /usr/local/bin/npx /usr/local/bin/yarn /usr/local/bin/yarnpkg /usr/local/bin/corepack
 
@@ -82,7 +80,7 @@ ENV PGLITE_DIR=/data/pglite
 # the container runtime or platform controls which host interfaces expose it.
 ENV HOST=0.0.0.0
 
-RUN install -d -m 0700 -o node -g node /data
+RUN mkdir -p /data && chown node:node /data && chmod 0700 /data
 
 COPY --from=production-deps /runtime/node_modules /repo/node_modules
 COPY --from=builder /build/dist /repo/packages/idle-server/dist
