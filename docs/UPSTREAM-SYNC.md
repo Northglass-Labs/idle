@@ -165,6 +165,30 @@ commit described above, which cannot add review records or weaken controls.
 New inline secret-scanner suppression directives are non-reviewable and must be
 removed rather than imported.
 
+Non-upstream dependency maintenance sometimes must change `package.json` or one
+of the three dependency and container boundary tests that verifies the release
+graph. Trusted CI permits only those four paths after a separate policy-only
+pull request records an exact `protected-import-control` review for every
+affected path. Workflow, scanner, publication-policy, metadata, attribution,
+license, and other boundary controls remain ineligible for this path. Generate
+the fingerprints by running the trusted base guard over the committed candidate:
+
+```bash
+BASE_SHA="$(git merge-base origin/main HEAD)"
+CANDIDATE_SHA="$(git rev-parse HEAD)"
+node scripts/verify-upstream-import.mjs --ci-range "$BASE_SHA" "$CANDIDATE_SHA"
+```
+
+Copy only the emitted seven-field records into
+`.upstream-import-review.txt`, remove the candidate changes, and merge that
+policy-only review first with `--policy-range`. Then rebase the unchanged
+candidate onto the merged review commit and rerun `--ci-range`. The review is
+bound to the pre-review base, every candidate byte, the path, status, and target
+contents. A changed byte, a self-authored review in the candidate range, a
+deleted control, an ineligible protected path, or any policy-file change still
+fails closed. Source-bound upstream imports continue to reject
+protected-control changes.
+
 Diagnostics contain paths, categories, and opaque fingerprints only. They do
 not repeat matching source lines, email addresses, hostnames, or configuration
 values.

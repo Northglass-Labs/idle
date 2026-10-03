@@ -46,6 +46,12 @@ const PROTECTED_IMPORT_FILES = new Set([
   'scripts/verify-upstream-import.mjs',
   'scripts/verify-upstream-import.test.mjs',
 ]);
+const REVIEWABLE_MAINTENANCE_CONTROLS = new Set([
+  'package.json',
+  'scripts/container-boundary.test.mjs',
+  'scripts/dependency-patch-boundary.test.mjs',
+  'scripts/dependency-update-boundary.test.mjs',
+]);
 
 const EXACT_SCAN_EXCLUSIONS = new Set([
   POLICY_FILE,
@@ -115,6 +121,7 @@ const REVIEWABLE_KINDS = new Set([
   'binary-asset',
   'config-addition',
   'filename-compatibility',
+  'protected-import-control',
   'source-transformation',
   'text-compatibility',
 ]);
@@ -1030,16 +1037,24 @@ function classifyAddedLine(line) {
   return classifications;
 }
 
-function scanDelta(root, { base, head, mode, source = null, allowFinalBaseline = false }) {
+function scanDelta(root, {
+  base,
+  head,
+  mode,
+  source = null,
+  allowFinalBaseline = false,
+  allowReviewedControls = false,
+}) {
   if (mode === 'staged') git(root, ['rev-parse', 'HEAD']);
   else git(root, ['rev-parse', base]);
   if (mode !== 'staged') git(root, ['rev-parse', head]);
 
   const importBaseCommit = resolveCommit(root, mode === 'staged' ? 'HEAD' : base);
+  const baseSha = approvalAnchor(root, importBaseCommit);
   const context = {
-    baseSha: approvalAnchor(root, importBaseCommit),
+    baseSha,
     importSha: importDeltaSha(root, mode, base, head),
-    sourceSha: source ? resolveCommit(root, source) : null,
+    sourceSha: source ? resolveCommit(root, source) : (allowReviewedControls ? baseSha : null),
   };
 
   const reviews = parseReviews(root, { mode: 'commit', ref: importBaseCommit });
@@ -1076,7 +1091,28 @@ function scanDelta(root, { base, head, mode, source = null, allowFinalBaseline =
       isProtectedImportPath(change.path) ||
       (change.oldPath && isProtectedImportPath(change.oldPath))
     ) {
-      issues.push({ kind: 'protected-import-control', path: change.path });
+      if (
+        !allowReviewedControls ||
+        change.status.startsWith('D') ||
+        changedPaths(change).some((relativePath) => !REVIEWABLE_MAINTENANCE_CONTROLS.has(relativePath))
+      ) {
+        issues.push({ kind: 'protected-import-control', path: change.path });
+        continue;
+      }
+      const contents = targetBytes(root, mode, head, change.path);
+      const decision = reviewDecision(reviews, {
+        kind: 'protected-import-control',
+        path: change.path,
+        targetContext: contents,
+        value: Buffer.from([change.status, change.oldPath ?? '', change.path].join('\0')),
+      }, context);
+      if (!decision.approved) {
+        issues.push({
+          kind: 'protected-import-control',
+          path: change.path,
+          fingerprint: decision.fingerprint,
+        });
+      }
       continue;
     }
     if (change.status.startsWith('D') || isExcluded(change.path)) continue;
@@ -1296,6 +1332,7 @@ function scanCiDelta(root, base, head) {
     head: headCommit,
     mode: 'commits',
     allowFinalBaseline: true,
+    allowReviewedControls: true,
   });
 }
 
