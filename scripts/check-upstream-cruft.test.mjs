@@ -551,6 +551,84 @@ test('a staged import cannot modify its guard, package entrypoint, or CI enforce
   }
 });
 
+test('trusted CI accepts an exact pre-reviewed protected maintenance delta', () => {
+  withRepo({ 'package.json': '{"private":true}\n', 'src/client.ts': 'export const version = 1;\n' }, (root) => {
+    const base = git(root, 'rev-parse', 'HEAD');
+    put(root, 'package.json', '{"private":true,"resolutions":{"safe-package":"1.2.3"}}\n');
+    git(root, 'add', 'package.json');
+    git(root, 'commit', '-qm', 'fixture protected maintenance candidate');
+    const candidate = git(root, 'rev-parse', 'HEAD');
+    const patch = spawnSync(
+      'git',
+      ['diff', '--binary', '--full-index', '--no-color', '--no-ext-diff', base, candidate, '--', '.'],
+      { cwd: root, encoding: null },
+    );
+    assert.equal(patch.status, 0, patch.stderr?.toString('utf8'));
+
+    const blocked = run(root, ['--ci-diff', base, candidate]);
+    const output = `${blocked.stdout}\n${blocked.stderr}`;
+    assert.notEqual(blocked.status, 0);
+    const approval = reviewLine(
+      output,
+      'protected-import-control',
+      'package.json',
+      'Reviewed exact dependency maintenance change',
+    );
+
+    put(root, '.upstream-import-review.txt', `${approval}\n`);
+    git(root, 'add', '.upstream-import-review.txt');
+    git(root, 'commit', '-qm', 'attempt to self-approve protected maintenance change');
+    const selfApproved = run(root, ['--ci-diff', base, git(root, 'rev-parse', 'HEAD')]);
+    assert.notEqual(
+      selfApproved.status,
+      0,
+      'a protected maintenance candidate must not approve itself in the same range',
+    );
+
+    git(root, 'reset', '--hard', '-q', base);
+    put(root, '.upstream-import-review.txt', `${approval}\n`);
+    git(root, 'add', '.upstream-import-review.txt');
+    git(root, 'commit', '-qm', 'approve exact protected maintenance change');
+    const reviewCommit = git(root, 'rev-parse', 'HEAD');
+    const policyOnly = run(root, ['--policy-diff', base, reviewCommit]);
+    assert.equal(policyOnly.status, 0, `${policyOnly.stdout}\n${policyOnly.stderr}`);
+
+    const applied = spawnSync('git', ['apply', '--index', '--binary', '-'], {
+      cwd: root,
+      encoding: null,
+      input: patch.stdout,
+    });
+    assert.equal(applied.status, 0, applied.stderr?.toString('utf8'));
+    git(root, 'commit', '-qm', 'apply reviewed protected maintenance change');
+    const reviewedCandidate = git(root, 'rev-parse', 'HEAD');
+    const reviewed = run(root, ['--ci-diff', reviewCommit, reviewedCandidate]);
+    assert.equal(reviewed.status, 0, `${reviewed.stdout}\n${reviewed.stderr}`);
+
+    put(root, 'src/client.ts', 'export const version = 2;\n');
+    git(root, 'add', 'src/client.ts');
+    git(root, 'commit', '-qm', 'change exact reviewed delta');
+    const staleCandidate = git(root, 'rev-parse', 'HEAD');
+    const stale = run(root, ['--ci-diff', reviewCommit, staleCandidate]);
+    assert.notEqual(stale.status, 0, 'changing any candidate byte must invalidate the approval');
+    assert.match(`${stale.stdout}\n${stale.stderr}`, /protected-import-control/);
+  });
+});
+
+test('trusted CI keeps workflow and policy controls outside maintenance review', () => {
+  withRepo({ '.github/workflows/hygiene.yml': 'permissions: read-all\n' }, (root) => {
+    const base = git(root, 'rev-parse', 'HEAD');
+    put(root, '.github/workflows/hygiene.yml', 'permissions: write-all\n');
+    git(root, 'add', '.github/workflows/hygiene.yml');
+    git(root, 'commit', '-qm', 'fixture workflow change');
+    const candidate = git(root, 'rev-parse', 'HEAD');
+    const blocked = run(root, ['--ci-diff', base, candidate]);
+    const output = `${blocked.stdout}\n${blocked.stderr}`;
+    assert.notEqual(blocked.status, 0);
+    assert.match(output, /protected-import-control/);
+    assert.doesNotMatch(output, /fingerprint [a-f0-9]{64}/);
+  });
+});
+
 test('staged mode requires exact review for imported signing or bundle configuration', () => {
   withRepo({ 'app.config.js': 'export default {};\n' }, (root) => {
     const source = git(root, 'rev-parse', 'HEAD');
