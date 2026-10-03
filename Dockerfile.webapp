@@ -24,6 +24,7 @@ COPY patches/*.cjs ./patches/
 RUN node -e 'const fs=require("node:fs");const root=JSON.parse(fs.readFileSync("/workspace-package.json","utf8"));const p=JSON.parse(fs.readFileSync("package.json","utf8"));p.resolutions={...root.resolutions,...p.resolutions};delete p.dependencies["@northglass/idle-wire"];fs.writeFileSync("package.json",JSON.stringify(p))'
 RUN yarn install --frozen-lockfile --non-interactive
 RUN node patches/force-elevenlabs-livekit-v0.cjs \
+    && node patches/force-metro-image-size-buffer.cjs \
     && node patches/sanitize-shiki-hack-opsec.cjs \
     && node patches/sanitize-react-native-url-polyfill-opsec.cjs \
     && node patches/sanitize-skia-reanimated-metadata-opsec.cjs
@@ -46,6 +47,10 @@ RUN yarn expo export --platform web --output-dir dist \
 
 # Stage 3: runtime with Nginx
 FROM nginx:alpine-slim@sha256:3b171d7224b669faa3cc2137fea0a65301791df1ec1f271ebd2a2b7461f7fade AS runner
+
+# Refresh the pinned base's Alpine packages so fixed runtime-library releases
+# published after the image build are present in the final release artifact.
+RUN apk upgrade --no-cache
 
 COPY --from=builder /app/dist /usr/share/nginx/html
 

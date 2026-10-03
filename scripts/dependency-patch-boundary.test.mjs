@@ -18,6 +18,10 @@ const skiaReanimatedOpsecPatchPath = path.join(
   repoRoot,
   'patches/sanitize-skia-reanimated-metadata-opsec.cjs',
 );
+const metroImageSizePatchPath = path.join(
+  repoRoot,
+  'patches/force-metro-image-size-buffer.cjs',
+);
 const retiredPatchPaths = [
   'patches/expose-pierre-diffs-style.cjs',
   'patches/fix-livekit-room-reuse.cjs',
@@ -28,6 +32,67 @@ const retiredPatchPaths = [
 function read(relativePath) {
   return fs.readFileSync(path.join(repoRoot, relativePath), 'utf8');
 }
+
+function assertVersionAtLeast(packageName, minimum) {
+  let packageRoot = path.dirname(require.resolve(packageName));
+  while (packageRoot !== path.dirname(packageRoot)) {
+    const manifestPath = path.join(packageRoot, 'package.json');
+    if (fs.existsSync(manifestPath)) {
+      const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+      if (manifest.name === packageName) {
+        const installed = manifest.version;
+        const installedParts = installed.split('.').map(Number);
+        const minimumParts = minimum.split('.').map(Number);
+        const comparison = installedParts.findIndex((part, index) => part !== minimumParts[index]);
+        assert.ok(
+          comparison === -1 || installedParts[comparison] > minimumParts[comparison],
+          `${packageName} ${installed} must be at least ${minimum}`,
+        );
+        return;
+      }
+    }
+    packageRoot = path.dirname(packageRoot);
+  }
+  assert.fail(`could not locate the installed ${packageName} manifest`);
+}
+
+test('the installed relay graph rejects the patched Socket.IO denial-of-service inputs', () => {
+  assertVersionAtLeast('engine.io', '6.6.10');
+  assertVersionAtLeast('socket.io-parser', '4.2.7');
+  assertVersionAtLeast('@fastify/static', '10.1.1');
+  assertVersionAtLeast('fastify', '5.12.2');
+  assertVersionAtLeast('axios', '1.20.0');
+  assertVersionAtLeast('fast-uri', '3.1.7');
+  assertVersionAtLeast('sharp', '0.35.4');
+
+  const { Server } = require('engine.io');
+  const engine = new Server();
+  engine.clients.session = { protocol: 4, transport: { name: 'polling' } };
+  let rejection;
+  engine.verify(
+    {
+      _query: { transport: 'websocket', sid: 'session' },
+      headers: {},
+      method: 'GET',
+    },
+    true,
+    (code, context) => {
+      rejection = { code, context };
+    },
+  );
+  assert.deepEqual(rejection, {
+    code: 3,
+    context: { name: 'PROTOCOL_MISMATCH', protocol: 3, previousProtocol: 4 },
+  });
+
+  const { Decoder } = require('socket.io-parser');
+  const decoder = new Decoder();
+  assert.throws(
+    () => decoder.add('50-["event"]'),
+    /Illegal attachments/,
+    'a binary event claiming zero attachments must be rejected immediately',
+  );
+});
 
 function resolveAppPackageRoot(packageName) {
   return path.dirname(require.resolve(`${packageName}/package.json`, {
@@ -62,6 +127,94 @@ function loadSkiaReanimatedOpsecPatch() {
   );
   return require(skiaReanimatedOpsecPatchPath);
 }
+
+test('the Metro image-size v2 compatibility patch reads ordinary asset paths as bytes', () => {
+  assert.equal(fs.existsSync(metroImageSizePatchPath), true, 'the reviewed Metro compatibility patch must exist');
+  const { patchMetroAssetsSource } = require(metroImageSizePatchPath);
+  const original = [
+    '  const isImageInput = assetInfo.files[0].includes(".zip/")',
+    '    ? _fs.default.readFileSync(assetInfo.files[0])',
+    '    : assetInfo.files[0];',
+    '  const dimensions = isImage ? (0, _imageSize.default)(isImageInput) : null;',
+    '',
+  ].join('\n');
+  const patched = patchMetroAssetsSource(original);
+  assert.match(patched, /const isImageInput = _fs\.default\.readFileSync\(assetInfo\.files\[0\]\);/);
+  assert.doesNotMatch(patched, /: assetInfo\.files\[0\];/);
+  assert.equal(patchMetroAssetsSource(patched), patched, 'the transform must be idempotent');
+});
+
+function makeMetroFixture({ version = '0.83.7' } = {}) {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'idle-metro-image-size-patch-'));
+  const nodeModulesRoot = path.join(root, 'node_modules');
+  const packageRoot = path.join(nodeModulesRoot, 'metro');
+  const assetLoader = path.join(packageRoot, 'src', 'Assets.js');
+  fs.mkdirSync(path.dirname(assetLoader), { recursive: true });
+  fs.writeFileSync(
+    path.join(packageRoot, 'package.json'),
+    `${JSON.stringify({ name: 'metro', version }, null, 2)}\n`,
+    'utf8',
+  );
+  fs.writeFileSync(
+    assetLoader,
+    [
+      'function getAssetData(assetInfo) {',
+      '  const isImageInput = assetInfo.files[0].includes(".zip/")',
+      '    ? _fs.default.readFileSync(assetInfo.files[0])',
+      '    : assetInfo.files[0];',
+      '  return (0, _imageSize.default)(isImageInput);',
+      '}',
+      '',
+    ].join('\n'),
+    'utf8',
+  );
+  return {
+    assetLoader,
+    nodeModulesRoot,
+    cleanup: () => fs.rmSync(root, { recursive: true, force: true }),
+  };
+}
+
+test('the Metro compatibility patch is version-bound, applied once, and fail-closed', () => {
+  const { applyMetroImageSizeBufferPatch } = require(metroImageSizePatchPath);
+  const fixture = makeMetroFixture();
+  try {
+    assert.deepEqual(
+      applyMetroImageSizeBufferPatch({
+        nodeModulesRoots: [fixture.nodeModulesRoot],
+        logger: silentLogger(),
+      }),
+      { packages: 1, files: 1 },
+    );
+    assert.match(
+      fs.readFileSync(fixture.assetLoader, 'utf8'),
+      /const isImageInput = _fs\.default\.readFileSync\(assetInfo\.files\[0\]\);/,
+    );
+    assert.deepEqual(
+      applyMetroImageSizeBufferPatch({
+        nodeModulesRoots: [fixture.nodeModulesRoot],
+        logger: silentLogger(),
+      }),
+      { packages: 1, files: 0 },
+      'a second application must leave the reviewed package bytes unchanged',
+    );
+  } finally {
+    fixture.cleanup();
+  }
+
+  const unsupported = makeMetroFixture({ version: '0.84.0' });
+  try {
+    assert.throws(
+      () => applyMetroImageSizeBufferPatch({
+        nodeModulesRoots: [unsupported.nodeModulesRoot],
+        logger: silentLogger(),
+      }),
+      /unsupported installed version 0\.84\.0/,
+    );
+  } finally {
+    unsupported.cleanup();
+  }
+});
 
 function silentLogger() {
   return { log() {} };
@@ -136,6 +289,7 @@ test('postinstall exposes reviewed dependency transforms and no obsolete Pierre/
   assert.equal(fs.existsSync(shikiOpsecPatchPath), true);
   assert.equal(fs.existsSync(urlPolyfillOpsecPatchPath), true);
   assert.equal(fs.existsSync(skiaReanimatedOpsecPatchPath), true);
+  assert.equal(fs.existsSync(metroImageSizePatchPath), true);
   for (const relativePath of retiredPatchPaths) {
     assert.equal(fs.existsSync(path.join(repoRoot, relativePath)), false, `${relativePath} must stay retired`);
     const retiredBasename = relativePath.split('/').at(-1).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -146,6 +300,8 @@ test('postinstall exposes reviewed dependency transforms and no obsolete Pierre/
   assert.match(postinstall, /sanitize-shiki-hack-opsec/);
   assert.match(postinstall, /sanitize-react-native-url-polyfill-opsec/);
   assert.match(postinstall, /sanitize-skia-reanimated-metadata-opsec/);
+  assert.match(postinstall, /force-metro-image-size-buffer/);
+  assert.match(webDockerfile, /force-metro-image-size-buffer/);
   assert.match(
     postinstall,
     /yarn workspace idle-app run patch-package --error-on-fail/,
