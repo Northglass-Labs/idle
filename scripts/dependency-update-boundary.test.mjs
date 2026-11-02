@@ -50,8 +50,14 @@ test('dependency policy stays at or above every reviewed advisory fix', () => {
   const appManifest = JSON.parse(
     fs.readFileSync(path.join(repoRoot, 'packages/idle-app/package.json'), 'utf8'),
   );
+  const cliManifest = JSON.parse(
+    fs.readFileSync(path.join(repoRoot, 'packages/idle-cli/package.json'), 'utf8'),
+  );
   const serverManifest = JSON.parse(
     fs.readFileSync(path.join(repoRoot, 'packages/idle-server/package.json'), 'utf8'),
+  );
+  const wireManifest = JSON.parse(
+    fs.readFileSync(path.join(repoRoot, 'packages/idle-wire/package.json'), 'utf8'),
   );
 
   assert.equal(manifest.resolutions['@hono/node-server'], '^2.0.5');
@@ -65,21 +71,31 @@ test('dependency policy stays at or above every reviewed advisory fix', () => {
   assert.equal(manifest.resolutions['decode-uri-component'], '0.5.0');
   assert.equal(manifest.resolutions['deepmerge-ts'], '8.0.0');
   assert.equal(manifest.resolutions['engine.io'], '^6.6.10');
-  assert.equal(manifest.resolutions['fast-uri'], '^3.1.7');
+  assert.equal(manifest.resolutions['fast-uri'], '^3.1.9');
   assert.equal(manifest.resolutions['fast-xml-parser'], '^5.10.1');
-  assert.equal(manifest.resolutions.fastify, '^5.12.2');
+  assert.equal(manifest.resolutions.fastify, '^5.12.6');
+  assert.equal(manifest.resolutions['follow-redirects'], '^1.16.1');
   assert.equal(manifest.resolutions.hono, '^4.13.7');
   assert.equal(manifest.resolutions['image-size'], '^2.0.3');
   assert.equal(manifest.resolutions.mermaid, '11.17.2');
   assert.equal(manifest.resolutions.postcss, '^8.5.18');
   assert.equal(manifest.resolutions['postcss-selector-parser'], '^6.1.3');
   assert.equal(manifest.resolutions['socket.io-parser'], '^4.2.7');
+  assert.equal(manifest.resolutions['source-map-js'], '^1.2.2');
   assert.equal(manifest.resolutions.tar, '^7.5.21');
   assert.equal(appManifest.devDependencies.sharp, '^0.35.4');
   assert.equal(appManifest.dependencies.mermaid, '11.17.2');
+  assert.equal(appManifest.dependencies.zod, '^4.6.6');
+  assert.equal(cliManifest.dependencies.zod, '^4.6.6');
   assert.equal(serverManifest.dependencies['@fastify/static'], '^10.1.2');
   assert.equal(serverManifest.dependencies.axios, '^1.20.0');
-  assert.equal(serverManifest.dependencies.fastify, '^5.12.2');
+  assert.equal(serverManifest.dependencies.fastify, '^5.12.6');
   assert.equal(serverManifest.dependencies.sharp, '^0.35.4');
+  assert.equal(serverManifest.dependencies.zod, '^4.6.6');
   assert.equal(serverManifest.devDependencies.tar, '^7.5.21');
+  assert.equal(wireManifest.dependencies.zod, '^4.6.6');
+  assert.match(
+    fs.readFileSync(path.join(repoRoot, 'yarn.lock'), 'utf8'),
+    /zod@\^4\.6\.6:\n  version "4\.6\.[6-9]"/,
+  );
 });
