@@ -88,6 +88,8 @@ test('Docker build contexts exclude local credentials and maintainer-only state'
 
 test('the canonical relay image runs the Node 22 build as an unprivileged user', () => {
   const dockerfile = read('Dockerfile');
+  const patchedNodeBase =
+    'node:22-alpine@sha256:fe4f6d74e20370acb04ad889077d14d0f64a9c8ea6a42bc60cddf1e844699914';
 
   assert.match(dockerfile, /^FROM node:22(?:-|\s)/m);
   assert.match(dockerfile, /^FROM node:22-alpine@sha256:[0-9a-f]{64} AS runner$/m);
@@ -97,12 +99,16 @@ test('the canonical relay image runs the Node 22 build as an unprivileged user',
   assert.match(dockerfile, /^RUN mkdir -p \/data && chown node:node \/data && chmod 0700 \/data$/m);
   assert.match(dockerfile, /delete p\.devDependencies/);
   assert.match(dockerfile, /--production --non-interactive --ignore-scripts/);
+  assert.match(dockerfile, /node \.\/patch-minio-stream-json-v3\.cjs \.\/node_modules/);
   assert.match(dockerfile, /COPY --from=builder \/build\/node_modules\/\.prisma \/runtime\/node_modules\/\.prisma/);
   assert.match(dockerfile, /^FROM node:22-alpine@sha256:[0-9a-f]{64} AS wire-builder$/m);
   assert.ok(
     dockerfile.match(/^FROM /gm)?.every((_, index) => dockerfile.split('\n').filter(line => line.startsWith('FROM '))[index].includes('@sha256:')),
     'every relay base image must be digest-pinned',
   );
+  for (const stage of ['wire-builder', 'builder', 'production-deps', 'runner']) {
+    assert.match(dockerfile, new RegExp(`^FROM ${patchedNodeBase} AS ${stage}$`, 'm'));
+  }
   assert.match(dockerfile, /COPY package\.json \/workspace-package\.json/);
   assert.match(dockerfile, /p\.resolutions=\{\.\.\.root\.resolutions,\.\.\.p\.resolutions\}/);
   assert.match(dockerfile, /COPY --from=wire-builder \/wire\/dist \/build\/node_modules\/@northglass\/idle-wire\/dist/);
@@ -117,7 +123,7 @@ test('the canonical relay image runs the Node 22 build as an unprivileged user',
   assert.doesNotMatch(dockerfile, /fix-pglite-prisma-bytes/);
   assert.doesNotMatch(dockerfile, /apt-get/);
   assert.match(dockerfile, /^RUN apk add --no-cache python3 make g\+\+$/m);
-  assert.match(dockerfile, /^RUN apk add --no-cache openssl$/m);
+  assert.match(dockerfile, /^RUN apk upgrade --no-cache \\\s+&& apk add --no-cache openssl$/m);
   assert.match(dockerfile, /RUN rm -rf \/usr\/local\/lib\/node_modules\/npm[\s\S]*\/opt\/yarn-v1\.22\.22/);
   assert.match(dockerfile, /rm -f \/usr\/local\/bin\/npm \/usr\/local\/bin\/npx \/usr\/local\/bin\/yarn \/usr\/local\/bin\/yarnpkg \/usr\/local\/bin\/corepack/);
   assert.match(dockerfile, /^HEALTHCHECK .*CMD \["node", "-e", "fetch\('http:\/\/127\.0\.0\.1:3005\/health'\)/m);
