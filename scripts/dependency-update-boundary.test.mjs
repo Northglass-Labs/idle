@@ -6,6 +6,25 @@ import { fileURLToPath } from 'node:url';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
+function readLockedVersion(packageName) {
+  const lock = fs.readFileSync(path.join(repoRoot, 'yarn.lock'), 'utf8');
+  const escapedName = packageName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const match = lock.match(new RegExp(`(?:^|\\n)${escapedName}@[^\\n]+:\\n  version "([0-9.]+)"`));
+  assert.ok(match, `${packageName} must be present in yarn.lock`);
+  return match[1].split('.').map(Number);
+}
+
+function assertVersionAtLeast(actual, minimum, packageName) {
+  const width = Math.max(actual.length, minimum.length);
+  for (let index = 0; index < width; index += 1) {
+    const difference = (actual[index] ?? 0) - (minimum[index] ?? 0);
+    if (difference > 0) return;
+    if (difference < 0) {
+      assert.fail(`${packageName} lock version must be at least ${minimum.join('.')}`);
+    }
+  }
+}
+
 test('Dependabot monitors every ecosystem without opening routine version PRs', () => {
   const config = fs.readFileSync(path.join(repoRoot, '.github/dependabot.yml'), 'utf8');
   assert.match(config, /^version:\s*2$/m);
@@ -37,7 +56,8 @@ test('dependency policy stays at or above every reviewed advisory fix', () => {
 
   assert.equal(manifest.resolutions['@hono/node-server'], '^2.0.5');
   assert.equal(manifest.resolutions['body-parser'], '^2.3.0');
-  assert.equal(manifest.resolutions.dompurify, '^3.4.12');
+  assert.equal(manifest.resolutions.dompurify, '^3.4.17');
+  assertVersionAtLeast(readLockedVersion('dompurify'), [3, 4, 17], 'dompurify');
   assert.equal(manifest.resolutions['@xmldom/xmldom'], '^0.8.15');
   assert.equal(manifest.resolutions.axios, '^1.20.0');
   assert.equal(manifest.resolutions['baseline-browser-mapping'], '^2.11.0');
