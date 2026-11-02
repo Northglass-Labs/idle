@@ -2,7 +2,7 @@
 # Uses PGlite (embedded Postgres), local filesystem storage, no Redis
 
 # Stage 1: build the shared wire package without installing unrelated workspaces.
-FROM node:22-alpine@sha256:0a7108bf6c7bf5de370ffb1a3ed6be93d405b43ff159f681a8d18c0e2bc2e402 AS wire-builder
+FROM node:22-alpine@sha256:fe4f6d74e20370acb04ad889077d14d0f64a9c8ea6a42bc60cddf1e844699914 AS wire-builder
 
 WORKDIR /wire
 COPY package.json /workspace-package.json
@@ -14,7 +14,7 @@ COPY packages/idle-wire ./
 RUN yarn build
 
 # Stage 2: build and type-check the relay in an isolated package install.
-FROM node:22-alpine@sha256:0a7108bf6c7bf5de370ffb1a3ed6be93d405b43ff159f681a8d18c0e2bc2e402 AS builder
+FROM node:22-alpine@sha256:fe4f6d74e20370acb04ad889077d14d0f64a9c8ea6a42bc60cddf1e844699914 AS builder
 
 RUN apk add --no-cache python3 make g++
 WORKDIR /build
@@ -35,7 +35,7 @@ RUN yarn build
 # Stage 3: install only the relay's production dependencies. Keeping this out
 # of the monorepo workspace prevents the mobile/web dependency graph from being
 # copied into the production relay image.
-FROM node:22-alpine@sha256:0a7108bf6c7bf5de370ffb1a3ed6be93d405b43ff159f681a8d18c0e2bc2e402 AS production-deps
+FROM node:22-alpine@sha256:fe4f6d74e20370acb04ad889077d14d0f64a9c8ea6a42bc60cddf1e844699914 AS production-deps
 
 WORKDIR /runtime
 
@@ -43,6 +43,7 @@ COPY package.json /workspace-package.json
 COPY yarn.lock ./
 COPY packages/idle-server/package.json ./package.json
 COPY packages/idle-server/prisma ./prisma
+COPY patches/patch-minio-stream-json-v3.cjs ./patch-minio-stream-json-v3.cjs
 
 # The server manifest has development-only workspace references that are not
 # published packages. Remove only devDependencies in this isolated image stage;
@@ -50,6 +51,8 @@ COPY packages/idle-server/prisma ./prisma
 RUN node -e 'const fs=require("node:fs");const root=JSON.parse(fs.readFileSync("/workspace-package.json","utf8"));const p=JSON.parse(fs.readFileSync("package.json","utf8"));p.resolutions={...root.resolutions,...p.resolutions};delete p.devDependencies;fs.writeFileSync("package.json",JSON.stringify(p))'
 
 RUN yarn install --frozen-lockfile --production --non-interactive --ignore-scripts \
+    && node ./patch-minio-stream-json-v3.cjs ./node_modules \
+    && rm ./patch-minio-stream-json-v3.cjs \
     && yarn cache clean
 
 # The full build stage generated the typed Prisma client. Copy only that output
@@ -59,13 +62,14 @@ COPY --from=builder /build/node_modules/.prisma /runtime/node_modules/.prisma
 COPY --from=builder /build/node_modules/@prisma/client /runtime/node_modules/@prisma/client
 
 # Stage 4: minimal, non-root runtime
-FROM node:22-alpine@sha256:0a7108bf6c7bf5de370ffb1a3ed6be93d405b43ff159f681a8d18c0e2bc2e402 AS runner
+FROM node:22-alpine@sha256:fe4f6d74e20370acb04ad889077d14d0f64a9c8ea6a42bc60cddf1e844699914 AS runner
 
 WORKDIR /repo
 
 # Prisma's native query engine needs the supported OpenSSL runtime. This is the
 # only package added to the base runtime image.
-RUN apk add --no-cache openssl
+RUN apk upgrade --no-cache \
+    && apk add --no-cache openssl
 
 # The runtime executes prebuilt JavaScript only. Remove the JavaScript package
 # managers inherited from the Node image so their dependency trees are not
