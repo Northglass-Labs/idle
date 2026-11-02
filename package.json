@@ -57,7 +57,7 @@
         "axios": "^1.20.0",
         "body-parser": "^2.3.0",
         "defu": "^6.1.5",
-        "dompurify": "^3.4.12",
+        "dompurify": "^3.4.17",
         "engine.io": "^6.6.10",
         "fast-uri": "^3.1.7",
         "fast-xml-parser": "^5.10.1",
