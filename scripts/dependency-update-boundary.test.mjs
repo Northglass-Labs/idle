@@ -119,6 +119,16 @@ test('dependency policy stays at or above every reviewed advisory fix', () => {
     'stream-json',
   );
   assert.equal(manifest.resolutions.tar, '^7.5.21');
+  assert.equal(manifest.resolutions['shell-quote'], '^1.11.0');
+  assertVersionAtLeast(readLockedVersion('shell-quote'), [1, 11, 0], 'shell-quote');
+  assert.equal(manifest.resolutions['proxy-addr'], '^2.0.8');
+  assertVersionAtLeast(readLockedVersion('proxy-addr'), [2, 0, 8], 'proxy-addr');
+  assert.equal(manifest.resolutions.compression, '^1.8.2');
+  assertVersionAtLeast(readLockedVersion('compression'), [1, 8, 2], 'compression');
+  assert.equal(manifest.resolutions['fast-copy'], '^4.1.2');
+  assert.equal(manifest.resolutions['@humanfs/node'], '^0.16.8');
+  assert.equal(manifest.resolutions.vite, '^7.3.7');
+  assert.equal(cliManifest.dependencies['@modelcontextprotocol/sdk'], '1.32.0');
   assert.equal(appManifest.devDependencies.sharp, '^0.35.4');
   assert.equal(appManifest.dependencies.mermaid, '11.17.2');
   assert.equal(appManifest.dependencies.zod, '^4.6.6');
