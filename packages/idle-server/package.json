@@ -36,13 +36,13 @@
     "standalone": "tsx ./sources/standalone.ts",
     "standalone:dev": "tsx ./sources/standalone.ts migrate && tsx ./sources/standalone.ts serve",
     "dev": "npm run standalone:dev",
-    "test": "vitest run && node --test scripts/package-contract.test.cjs scripts/pglite-account-admission-contract.test.cjs scripts/pglite-attachment-budget-contract.test.cjs scripts/pglite-bytes-contract.test.cjs scripts/pglite-canonical-attachment-identity-contract.test.cjs scripts/pglite-provider-vault-contract.test.cjs scripts/pglite-usage-contract.test.cjs scripts/pglite-voice-capacity-contract.test.cjs",
+    "test": "vitest run && node --test scripts/package-contract.test.cjs scripts/packed-dependency-runtime-contract.test.cjs scripts/pglite-account-admission-contract.test.cjs scripts/pglite-attachment-budget-contract.test.cjs scripts/pglite-bytes-contract.test.cjs scripts/pglite-canonical-attachment-identity-contract.test.cjs scripts/pglite-provider-vault-contract.test.cjs scripts/pglite-usage-contract.test.cjs scripts/pglite-voice-capacity-contract.test.cjs",
     "test:integration": "vitest run --config vitest.integration.config.ts",
     "migrate": "prisma migrate dev",
     "migrate:reset": "prisma migrate reset",
-    "generate": "prisma generate --schema=prisma/schema.prisma",
+    "generate": "node scripts/generate-prisma.cjs",
     "postinstall": "node scripts/generate-prisma.cjs",
-    "prepack": "npm run build:runtime && node --test scripts/package-contract.test.cjs scripts/pglite-account-admission-contract.test.cjs scripts/pglite-attachment-budget-contract.test.cjs scripts/pglite-bytes-contract.test.cjs scripts/pglite-canonical-attachment-identity-contract.test.cjs scripts/pglite-provider-vault-contract.test.cjs scripts/pglite-usage-contract.test.cjs scripts/pglite-voice-capacity-contract.test.cjs",
+    "prepack": "node ../../patches/patch-packed-runtime-dependencies.cjs ./node_modules server && npm run build:runtime && node --test scripts/package-contract.test.cjs scripts/packed-dependency-runtime-contract.test.cjs scripts/pglite-account-admission-contract.test.cjs scripts/pglite-attachment-budget-contract.test.cjs scripts/pglite-bytes-contract.test.cjs scripts/pglite-canonical-attachment-identity-contract.test.cjs scripts/pglite-provider-vault-contract.test.cjs scripts/pglite-usage-contract.test.cjs scripts/pglite-voice-capacity-contract.test.cjs",
     "prepublishOnly": "npm run typecheck && npm test",
     "typecheck": "tsc --noEmit",
     "build:runtime": "node scripts/build-runtime.cjs",
@@ -104,5 +104,10 @@
   "publishConfig": {
     "access": "public",
     "registry": "https://registry.npmjs.org"
-  }
+  },
+  "bundleDependencies": [
+    "minio",
+    "privacy-kit",
+    "prisma"
+  ]
 }

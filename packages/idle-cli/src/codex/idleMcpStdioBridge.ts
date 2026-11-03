@@ -83,6 +83,8 @@ async function main() {
   const server = new McpServer({
     name: 'Idle MCP Bridge',
     version: '1.0.0',
+  }, {
+    maxToolInputElements: 1,
   });
 
   // Register the single tool and forward to HTTP MCP

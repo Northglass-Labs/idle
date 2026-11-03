@@ -185,6 +185,23 @@ describe('startIdleServer', () => {
         await client.close();
     });
 
+    it('rejects oversized tool-input collections before schema parsing', async () => {
+        const { onMetadata, server } = await start();
+        const client = await connect(server);
+
+        const response = await client.callTool({
+            name: 'change_title',
+            arguments: {
+                title: 'Ignore the padding',
+                padding: Array.from({ length: 16 }, (_, index) => ({ index })),
+            },
+        });
+
+        expect(response.isError).toBe(true);
+        expect(onMetadata).not.toHaveBeenCalled();
+        await client.close();
+    });
+
     it('authenticates a packaged STDIO bridge without putting the token in its arguments', async () => {
         const { onMetadata, server } = await start();
         const config = createIdleMcpBridgeConfig(server);

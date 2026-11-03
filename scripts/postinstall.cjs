@@ -4,6 +4,9 @@ const { applyShikiHackOpsecPatch } = require('../patches/sanitize-shiki-hack-ops
 const { applyUrlPolyfillOpsecPatch } = require('../patches/sanitize-react-native-url-polyfill-opsec.cjs');
 const { applySkiaReanimatedOpsecPatch } = require('../patches/sanitize-skia-reanimated-metadata-opsec.cjs');
 const { applyMetroImageSizeBufferPatch } = require('../patches/force-metro-image-size-buffer.cjs');
+const {
+  applyPackedRuntimeDependencyPatches,
+} = require('../patches/patch-packed-runtime-dependencies.cjs');
 
 // EAS installs the monorepo from its root and runs only this lifecycle script.
 // Apply the app's version-bound patch-package fixes here as well so native
@@ -17,6 +20,14 @@ applyShikiHackOpsecPatch();
 applyUrlPolyfillOpsecPatch();
 applySkiaReanimatedOpsecPatch();
 applyMetroImageSizeBufferPatch();
+applyPackedRuntimeDependencyPatches({
+  nodeModulesRoots: [require('node:path').resolve(__dirname, '..', 'packages/idle-cli/node_modules')],
+  packageNames: ['@anthropic-ai/sandbox-runtime'],
+});
+applyPackedRuntimeDependencyPatches({
+  nodeModulesRoots: [require('node:path').resolve(__dirname, '..', 'packages/idle-server/node_modules')],
+  packageNames: ['privacy-kit', 'query-string', '@prisma/config', 'minio', 'prisma'],
+});
 
 if (process.env.SKIP_IDLE_WIRE_BUILD === '1') {
   console.log('[postinstall] SKIP_IDLE_WIRE_BUILD=1, skipping @northglass/idle-wire build');
