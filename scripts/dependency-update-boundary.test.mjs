@@ -71,7 +71,8 @@ test('dependency policy stays at or above every reviewed advisory fix', () => {
   );
 
   assert.equal(manifest.resolutions['@hono/node-server'], '^2.0.5');
-  assert.equal(manifest.resolutions['body-parser'], '^2.3.0');
+  assert.equal(manifest.resolutions['body-parser'], '^2.4.0');
+  assertVersionAtLeast(readLockedVersion('body-parser'), [2, 4, 0], 'body-parser');
   assert.equal(manifest.resolutions.dompurify, '^3.4.17');
   assertVersionAtLeast(readLockedVersion('dompurify'), [3, 4, 17], 'dompurify');
   assert.equal(manifest.resolutions['@xmldom/xmldom'], '^0.8.15');
@@ -84,7 +85,8 @@ test('dependency policy stays at or above every reviewed advisory fix', () => {
     [0, 5, 1],
     'decode-uri-component',
   );
-  assert.equal(manifest.resolutions['deepmerge-ts'], '8.0.0');
+  assert.equal(manifest.resolutions['deepmerge-ts'], '8.0.2');
+  assertVersionAtLeast(readLockedVersion('deepmerge-ts'), [8, 0, 2], 'deepmerge-ts');
   assert.equal(manifest.resolutions['engine.io'], '^6.6.10');
   assert.equal(manifest.resolutions['fast-uri'], '^3.1.9');
   assert.equal(manifest.resolutions['pino-pretty/fast-copy'], '^4.1.0');
@@ -107,10 +109,27 @@ test('dependency policy stays at or above every reviewed advisory fix', () => {
   assert.equal(manifest.resolutions.mermaid, '11.17.2');
   assert.equal(manifest.resolutions.postcss, '^8.5.18');
   assert.equal(manifest.resolutions['postcss-selector-parser'], '^6.1.3');
-  assert.equal(manifest.resolutions['privacy-kit/zod'], '^4.6.6');
+  assert.equal(manifest.resolutions['**/privacy-kit/zod'], '^4.6.6');
+  assert.equal(manifest.resolutions['**/@anthropic-ai/sandbox-runtime/zod'], '^4.6.6');
+  assert.equal(manifest.resolutions['**/@modelcontextprotocol/sdk/zod'], '^4.6.6');
+  assertVersionAtLeast(readLockedVersionForSelector('zod@3.25.76'), [4, 6, 6], 'privacy-kit zod');
+  assertVersionAtLeast(
+    readLockedVersionForSelector('zod@^3.24.1'),
+    [4, 6, 6],
+    'sandbox-runtime zod',
+  );
+  assertVersionAtLeast(
+    readLockedVersionForSelector('"zod@^3.25 || ^4.0"'),
+    [4, 6, 6],
+    'MCP SDK zod',
+  );
+  assert.equal(manifest.resolutions['proxy-addr'], '^2.0.8');
+  assertVersionAtLeast(readLockedVersion('proxy-addr'), [2, 0, 8], 'proxy-addr');
   assert.equal(manifest.resolutions.qs, '^6.16.1');
   assertVersionAtLeast(readLockedVersion('qs'), [6, 16, 1], 'qs');
   assert.equal(manifest.resolutions['socket.io-parser'], '^4.2.7');
+  assert.equal(manifest.resolutions['shell-quote'], '^1.11.0');
+  assertVersionAtLeast(readLockedVersion('shell-quote'), [1, 11, 0], 'shell-quote');
   assert.equal(manifest.resolutions['source-map-js'], '^1.2.2');
   assert.equal(manifest.resolutions['minio/stream-json'], '^3.6.0');
   assertVersionAtLeast(
@@ -123,6 +142,13 @@ test('dependency policy stays at or above every reviewed advisory fix', () => {
   assert.equal(appManifest.dependencies.mermaid, '11.17.2');
   assert.equal(appManifest.dependencies.zod, '^4.6.6');
   assert.equal(cliManifest.dependencies.zod, '^4.6.6');
+  assert.equal(cliManifest.dependencies['shell-quote'], '^1.11.0');
+  assert.equal(cliManifest.dependencies['@modelcontextprotocol/sdk'], '1.32.0');
+  assert.equal(cliManifest.dependencies['@anthropic-ai/sandbox-runtime'], '0.0.37');
+  assert.match(
+    fs.readFileSync(path.join(repoRoot, 'yarn.lock'), 'utf8'),
+    /"@modelcontextprotocol\/sdk@1\.32\.0":\n  version "1\.32\.[0-9]+"/,
+  );
   assert.equal(serverManifest.dependencies['@fastify/static'], '^10.1.2');
   assert.equal(serverManifest.dependencies.axios, '^1.20.0');
   assert.equal(serverManifest.dependencies.fastify, '^5.12.6');
