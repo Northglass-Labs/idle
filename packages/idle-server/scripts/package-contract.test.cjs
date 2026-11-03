@@ -102,6 +102,7 @@ async function packAndExtract(packageRoot, tempRoot, label) {
     cwd: packageRoot,
     encoding: 'utf8',
     env: packEnv,
+    maxBuffer: 64 * 1024 * 1024,
   });
   const metadata = JSON.parse(output)[0];
   const tarball = path.join(packDir, metadata.filename);
@@ -121,8 +122,9 @@ function assertOnlyAllowedPaths(files, allowed, label) {
   assert.deepEqual(unexpected, [], `${label} packed unexpected files`);
 }
 
-function readPackedTextFiles(packed) {
+function readPackedTextFiles(packed, include = () => true) {
   return packed.files
+    .filter(include)
     .map(file => {
       const contents = fs.readFileSync(path.join(packed.root, file));
       return contents.includes(0) ? '' : contents.toString('utf8');
@@ -189,10 +191,31 @@ test('embedded database adapter stays on the Prisma 6 compatible line', () => {
   assert.equal(serverPackage.dependencies['pglite-prisma-adapter'], '0.6.1');
 });
 
+test('published runtimes bundle their reviewed dependency compatibility graph', () => {
+  assert.deepEqual(serverPackage.bundleDependencies, [
+    'minio',
+    'privacy-kit',
+    'prisma',
+  ]);
+  assert.deepEqual(cliPackage.bundleDependencies, [
+    '@anthropic-ai/sandbox-runtime',
+  ]);
+  assert.match(
+    serverPackage.scripts.prepack,
+    /patch-packed-runtime-dependencies\.cjs \.\/node_modules server/,
+  );
+  assert.match(
+    cliPackage.scripts.prepack,
+    /patch-packed-runtime-dependencies\.cjs \.\/node_modules cli/,
+  );
+});
+
 test('server postinstall invokes Prisma through Node without a platform shim', () => {
-  assert.equal(serverPackage.scripts.generate, 'prisma generate --schema=prisma/schema.prisma');
+  assert.equal(serverPackage.scripts.generate, 'node scripts/generate-prisma.cjs');
   assert.equal(serverPackage.scripts.postinstall, 'node scripts/generate-prisma.cjs');
   assert.ok(serverPackage.files.includes('scripts/generate-prisma.cjs'));
+  assert.ok(rootPackage.workspaces.nohoist.includes('**/@prisma/client'));
+  assert.ok(rootPackage.workspaces.nohoist.includes('**/@prisma/client/**'));
   assert.equal(serverPackage.dependencies['prisma-json-types-generator'], undefined);
   assert.equal(serverPackage.devDependencies['prisma-json-types-generator'], '^3.5.1');
 
@@ -505,6 +528,7 @@ test('actual npm tarballs contain licenses and no private build artifacts', asyn
     /^prisma\/migrations\/(?:[^/]+\/migration\.sql|migration_lock\.toml)$/,
     'prisma/schema.prisma',
     'scripts/generate-prisma.cjs',
+    /^node_modules\//,
   ], 'server');
   assertOnlyAllowedPaths(agent.files, [
     'LICENSE',
@@ -524,6 +548,7 @@ test('actual npm tarballs contain licenses and no private build artifacts', asyn
     'scripts/claude_local_launcher.cjs',
     'scripts/claude_version_utils.cjs',
     'scripts/ripgrep_launcher.cjs',
+    /^node_modules\//,
   ], 'cli');
   assert.deepEqual(
     cli.files.filter(file =>
@@ -550,14 +575,17 @@ test('actual npm tarballs contain licenses and no private build artifacts', asyn
     assert.ok(license.includes(upstreamLicenseNotice));
     assert.match(license, /Copyright \(c\) 2026 Northglass LLC/);
     const forbiddenPaths = packed.files.filter(file =>
-      /(^|\/)(?:\.env(?:\.|$)|__tests__|tests?|internal|adrs?)(?:\/|$)/i.test(file)
-      || /\.(?:spec|test)\.[cm]?[jt]sx?$/i.test(file)
-      || /(^|\/)sources\//i.test(file)
-      || /\.map$/i.test(file),
+      !file.startsWith('node_modules/')
+      && (
+        /(^|\/)(?:\.env(?:\.|$)|__tests__|tests?|internal|adrs?)(?:\/|$)/i.test(file)
+        || /\.(?:spec|test)\.[cm]?[jt]sx?$/i.test(file)
+        || /(^|\/)sources\//i.test(file)
+        || /\.map$/i.test(file)
+      ),
     );
     assert.deepEqual(forbiddenPaths, [], `${label} tarball leaked private paths`);
 
-    const text = readPackedTextFiles(packed);
+    const text = readPackedTextFiles(packed, file => !file.startsWith('node_modules/'));
     assert.doesNotMatch(text, /[A-Z0-9._%+-]+@gmail\.com/i);
     assert.doesNotMatch(text, /\/Users\/[^/\s]+\/|\/home\/runner\/work\/|[A-Za-z]:\\Users\\/);
     assert.doesNotMatch(text, /-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----/);
@@ -565,8 +593,12 @@ test('actual npm tarballs contain licenses and no private build artifacts', asyn
     assert.doesNotMatch(text, /(?:client[_-]?secret|api[_-]?key)\s*[:=]\s*["'][A-Za-z0-9._-]{16,}["']/i);
   }
 
-  assert.doesNotMatch(readPackedTextFiles(server), /(?:from\s+|require\()["']@northglass\/idle-wire/);
-  assert.doesNotMatch(readPackedTextFiles(cli), /(?:from\s+|require\()["']@northglass\/idle-wire/);
+  const ownedPackageText = packed => readPackedTextFiles(
+    packed,
+    file => !file.startsWith('node_modules/'),
+  );
+  assert.doesNotMatch(ownedPackageText(server), /(?:from\s+|require\()["']@northglass\/idle-wire/);
+  assert.doesNotMatch(ownedPackageText(cli), /(?:from\s+|require\()["']@northglass\/idle-wire/);
 
   let agentText = readPackedTextFiles(agent);
   for (const protocolCompatibilityToken of [upstreamLicenseNotice, 'Happy EnCoder', 'X-Happy-Client']) {
@@ -574,7 +606,7 @@ test('actual npm tarballs contain licenses and no private build artifacts', asyn
   }
   assert.doesNotMatch(agentText, /\bhappy\b|happy[-_]|\bhandy\b/i);
 
-  let serverText = readPackedTextFiles(server);
+  let serverText = ownedPackageText(server);
   for (const compatibilityToken of [
     upstreamLicenseNotice,
     'HAPPY_STATIC_DIR',

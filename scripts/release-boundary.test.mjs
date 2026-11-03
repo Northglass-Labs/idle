@@ -297,6 +297,26 @@ test('CLI package smoke installs only the workspaces it builds and packages', ()
   );
 });
 
+test('CLI package smoke audits an ordinary empty consumer before global installation', () => {
+  const workflow = read('.github/workflows/cli-smoke-test.yml');
+  const linuxJob = workflow.slice(
+    workflow.indexOf('  smoke-test-linux:'),
+    workflow.indexOf('  smoke-test-windows:'),
+  );
+
+  assert.match(linuxJob, /npm init --yes/);
+  assert.match(
+    linuxJob,
+    /npm install --ignore-scripts .*northglass-idle-server-.*\.tgz .*idle-coder-.*\.tgz/,
+  );
+  assert.match(linuxJob, /npm audit --omit=dev --audit-level=high/);
+  assert.ok(
+    linuxJob.indexOf('npm audit --omit=dev --audit-level=high')
+      < linuxJob.indexOf('npm install -g'),
+    'the consumer audit must fail closed before packages reach the global prefix',
+  );
+});
+
 test('public deploy guides use portable examples, not Northglass operations history', () => {
   const deployDocsDir = path.join(repoRoot, 'docs', 'deploy-targets');
   const docs = fs

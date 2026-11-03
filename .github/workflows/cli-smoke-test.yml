@@ -65,6 +65,15 @@ jobs:
         echo "Packed files:"
         find "$PACK_DIR" -maxdepth 1 -name '*.tgz' -print
 
+    - name: Audit packed packages in an empty consumer
+      run: |
+        CONSUMER_DIR="$RUNNER_TEMP/idle-consumer"
+        mkdir -p "$CONSUMER_DIR"
+        cd "$CONSUMER_DIR"
+        npm init --yes
+        npm install --ignore-scripts "$RUNNER_TEMP"/idle-packs/northglass-idle-server-*.tgz "$RUNNER_TEMP"/idle-packs/idle-coder-*.tgz
+        npm audit --omit=dev --audit-level=high
+
     - name: Install packed packages globally
       run: |
         npm install -g "$RUNNER_TEMP"/idle-packs/northglass-idle-server-*.tgz "$RUNNER_TEMP"/idle-packs/idle-coder-*.tgz

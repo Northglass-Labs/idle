@@ -77,6 +77,8 @@ function createMcpServer(handler: (title: string) => Promise<{ success: boolean 
     const mcp = new McpServer({
         name: "Idle MCP",
         version: "1.0.0",
+    }, {
+        maxToolInputElements: 1,
     });
 
     mcp.registerTool('change_title', {
