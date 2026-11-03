@@ -1,7 +1,7 @@
 'use strict';
 
 const assert = require('node:assert/strict');
-const { execFileSync } = require('node:child_process');
+const { execFileSync, spawnSync } = require('node:child_process');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
@@ -102,6 +102,7 @@ async function packAndExtract(packageRoot, tempRoot, label) {
     cwd: packageRoot,
     encoding: 'utf8',
     env: packEnv,
+    maxBuffer: 64 * 1024 * 1024,
   });
   const metadata = JSON.parse(output)[0];
   const tarball = path.join(packDir, metadata.filename);
@@ -111,7 +112,51 @@ async function packAndExtract(packageRoot, tempRoot, label) {
     metadata,
     files: listFiles(extractedPackage),
     root: extractedPackage,
+    tarball,
   };
+}
+
+function auditPackedConsumer({ consumerRoot, tarballs }) {
+  fs.mkdirSync(consumerRoot, { recursive: true });
+  fs.writeFileSync(
+    path.join(consumerRoot, 'package.json'),
+    `${JSON.stringify({ name: 'idle-packed-consumer', private: true }, null, 2)}\n`,
+  );
+
+  const npm = resolveNpmInvocation();
+  const npmOptions = {
+    cwd: consumerRoot,
+    encoding: 'utf8',
+    env: { ...process.env, npm_config_loglevel: 'error' },
+    maxBuffer: 64 * 1024 * 1024,
+  };
+  execFileSync(npm.file, [
+    ...npm.args,
+    'install',
+    '--ignore-scripts',
+    '--no-audit',
+    '--no-fund',
+    ...tarballs,
+  ], npmOptions);
+
+  const audit = spawnSync(npm.file, [
+    ...npm.args,
+    'audit',
+    '--omit=dev',
+    '--json',
+  ], npmOptions);
+  assert.equal(audit.error, undefined, 'packed consumer audit must launch');
+  assert.ok(
+    audit.status === 0 || audit.status === 1,
+    `packed consumer audit exited unexpectedly: ${audit.stderr}`,
+  );
+
+  const output = audit.stdout ?? '';
+  const jsonEnd = output.lastIndexOf('}');
+  assert.notEqual(jsonEnd, -1, 'packed consumer audit must return JSON');
+  const report = JSON.parse(output.slice(0, jsonEnd + 1));
+  assert.equal(report.metadata?.vulnerabilities?.critical, 0);
+  assert.equal(report.metadata?.vulnerabilities?.high, 0);
 }
 
 function assertOnlyAllowedPaths(files, allowed, label) {
@@ -121,8 +166,9 @@ function assertOnlyAllowedPaths(files, allowed, label) {
   assert.deepEqual(unexpected, [], `${label} packed unexpected files`);
 }
 
-function readPackedTextFiles(packed) {
+function readPackedTextFiles(packed, include = () => true) {
   return packed.files
+    .filter(include)
     .map(file => {
       const contents = fs.readFileSync(path.join(packed.root, file));
       return contents.includes(0) ? '' : contents.toString('utf8');
@@ -189,10 +235,31 @@ test('embedded database adapter stays on the Prisma 6 compatible line', () => {
   assert.equal(serverPackage.dependencies['pglite-prisma-adapter'], '0.6.1');
 });
 
+test('published runtimes bundle their reviewed dependency compatibility graph', () => {
+  assert.deepEqual(serverPackage.bundleDependencies, [
+    'minio',
+    'privacy-kit',
+    'prisma',
+  ]);
+  assert.deepEqual(cliPackage.bundleDependencies, [
+    '@anthropic-ai/sandbox-runtime',
+  ]);
+  assert.match(
+    serverPackage.scripts.prepack,
+    /patch-packed-runtime-dependencies\.cjs \.\/node_modules server/,
+  );
+  assert.equal(
+    cliPackage.scripts.prepack,
+    'node ../../patches/patch-packed-runtime-dependencies.cjs ./node_modules cli && npm run build',
+  );
+});
+
 test('server postinstall invokes Prisma through Node without a platform shim', () => {
-  assert.equal(serverPackage.scripts.generate, 'prisma generate --schema=prisma/schema.prisma');
+  assert.equal(serverPackage.scripts.generate, 'node scripts/generate-prisma.cjs');
   assert.equal(serverPackage.scripts.postinstall, 'node scripts/generate-prisma.cjs');
   assert.ok(serverPackage.files.includes('scripts/generate-prisma.cjs'));
+  assert.ok(rootPackage.workspaces.nohoist.includes('**/@prisma/client'));
+  assert.ok(rootPackage.workspaces.nohoist.includes('**/@prisma/client/**'));
   assert.equal(serverPackage.dependencies['prisma-json-types-generator'], undefined);
   assert.equal(serverPackage.devDependencies['prisma-json-types-generator'], '^3.5.1');
 
@@ -485,6 +552,10 @@ test('actual npm tarballs contain licenses and no private build artifacts', asyn
   const agent = await packAndExtract(agentRoot, tempRoot, 'agent');
   const cli = await packAndExtract(cliRoot, tempRoot, 'cli');
   const wire = await packAndExtract(wireRoot, tempRoot, 'wire');
+  auditPackedConsumer({
+    consumerRoot: path.join(tempRoot, 'consumer'),
+    tarballs: [server.tarball, cli.tarball],
+  });
 
   assert.ok(
     cli.files.includes('scripts/claude_local_launcher.cjs'),
@@ -505,6 +576,7 @@ test('actual npm tarballs contain licenses and no private build artifacts', asyn
     /^prisma\/migrations\/(?:[^/]+\/migration\.sql|migration_lock\.toml)$/,
     'prisma/schema.prisma',
     'scripts/generate-prisma.cjs',
+    /^node_modules\//,
   ], 'server');
   assertOnlyAllowedPaths(agent.files, [
     'LICENSE',
@@ -524,6 +596,7 @@ test('actual npm tarballs contain licenses and no private build artifacts', asyn
     'scripts/claude_local_launcher.cjs',
     'scripts/claude_version_utils.cjs',
     'scripts/ripgrep_launcher.cjs',
+    /^node_modules\//,
   ], 'cli');
   assert.deepEqual(
     cli.files.filter(file =>
@@ -550,14 +623,17 @@ test('actual npm tarballs contain licenses and no private build artifacts', asyn
     assert.ok(license.includes(upstreamLicenseNotice));
     assert.match(license, /Copyright \(c\) 2026 Northglass LLC/);
     const forbiddenPaths = packed.files.filter(file =>
-      /(^|\/)(?:\.env(?:\.|$)|__tests__|tests?|internal|adrs?)(?:\/|$)/i.test(file)
-      || /\.(?:spec|test)\.[cm]?[jt]sx?$/i.test(file)
-      || /(^|\/)sources\//i.test(file)
-      || /\.map$/i.test(file),
+      !file.startsWith('node_modules/')
+      && (
+        /(^|\/)(?:\.env(?:\.|$)|__tests__|tests?|internal|adrs?)(?:\/|$)/i.test(file)
+        || /\.(?:spec|test)\.[cm]?[jt]sx?$/i.test(file)
+        || /(^|\/)sources\//i.test(file)
+        || /\.map$/i.test(file)
+      ),
     );
     assert.deepEqual(forbiddenPaths, [], `${label} tarball leaked private paths`);
 
-    const text = readPackedTextFiles(packed);
+    const text = readPackedTextFiles(packed, file => !file.startsWith('node_modules/'));
     assert.doesNotMatch(text, /[A-Z0-9._%+-]+@gmail\.com/i);
     assert.doesNotMatch(text, /\/Users\/[^/\s]+\/|\/home\/runner\/work\/|[A-Za-z]:\\Users\\/);
     assert.doesNotMatch(text, /-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----/);
@@ -565,8 +641,12 @@ test('actual npm tarballs contain licenses and no private build artifacts', asyn
     assert.doesNotMatch(text, /(?:client[_-]?secret|api[_-]?key)\s*[:=]\s*["'][A-Za-z0-9._-]{16,}["']/i);
   }
 
-  assert.doesNotMatch(readPackedTextFiles(server), /(?:from\s+|require\()["']@northglass\/idle-wire/);
-  assert.doesNotMatch(readPackedTextFiles(cli), /(?:from\s+|require\()["']@northglass\/idle-wire/);
+  const ownedPackageText = packed => readPackedTextFiles(
+    packed,
+    file => !file.startsWith('node_modules/'),
+  );
+  assert.doesNotMatch(ownedPackageText(server), /(?:from\s+|require\()["']@northglass\/idle-wire/);
+  assert.doesNotMatch(ownedPackageText(cli), /(?:from\s+|require\()["']@northglass\/idle-wire/);
 
   let agentText = readPackedTextFiles(agent);
   for (const protocolCompatibilityToken of [upstreamLicenseNotice, 'Happy EnCoder', 'X-Happy-Client']) {
@@ -574,7 +654,7 @@ test('actual npm tarballs contain licenses and no private build artifacts', asyn
   }
   assert.doesNotMatch(agentText, /\bhappy\b|happy[-_]|\bhandy\b/i);
 
-  let serverText = readPackedTextFiles(server);
+  let serverText = ownedPackageText(server);
   for (const compatibilityToken of [
     upstreamLicenseNotice,
     'HAPPY_STATIC_DIR',

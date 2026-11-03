@@ -11,6 +11,8 @@ The release graph maintains explicit security floors for packages used by the se
 - Moved the digest-pinned Node 22 runtime to Alpine and added only OpenSSL to the base runtime image, eliminating the unfixed high-severity operating-system findings in the previous Debian runtime.
 - Upgraded Alpine packages in the final unprivileged Nginx stage so fixed runtime libraries published after the digest-pinned base was built are included in each verified release image.
 - Added compatible resolutions for patched XML, browser-data, image-size, Hono, Mermaid, selector-parser, URI-decoding, and Prisma configuration dependencies.
+- Raised the shipped CLI and relay graph to `body-parser` 2.4, `proxy-addr` 2.0.8, `shell-quote` 1.11 or newer, and Model Context Protocol SDK 1.32.0. MCP tool input is also bounded to the one declared title argument.
+- Added a fail-closed package transform for the exact reviewed `@anthropic-ai/sandbox-runtime` 0.0.37, `privacy-kit` 0.0.25, `query-string` 7.1.3, and `@prisma/config` 6.19.3 releases. It verifies upstream versions and file hashes before changing bytes, routes Zod 3 APIs through Zod 4's maintained `/v3` export, and installs fixed URI-decoder and deep-merge releases. The transformed runtime dependencies are bundled into the CLI and relay tarballs so an ordinary npm consumer receives the reviewed graph without relying on root-only Yarn resolutions.
 - Kept the patched `image-size` 2.x API and added a version-bound Metro transform for Expo SDK 55: Metro now reads ordinary asset paths into bytes before calling the parser. The transform recognizes only the reviewed Metro 0.83.5/0.83.7 source anchor, is idempotent, and fails the install on version or source drift.
 - Updated the native Mermaid WebView's exact CDN, CSP and SRI pin from vulnerable 11.16.0 to reviewed 11.17.2; the fetched artifact is byte-identical to the locked package bundle.
 - Added a regression test that exercises the Engine.IO protocol-mismatch rejection and Socket.IO zero-attachment rejection against the installed release graph.
@@ -19,8 +21,11 @@ The release graph maintains explicit security floors for packages used by the se
 
 - The dependency regression and repository dependency-boundary tests pass.
 - Prisma Client generation passes with the resolved Prisma configuration graph.
-- The relay's 83 Vitest files (700 tests), eight package and migration contract suites (28 tests), typecheck, and standalone runtime build pass.
+- The CLI's 150 unit-test files (1,288 tests) and typecheck pass. The real sandbox-runtime integration preserves argument boundaries and denies configured reads, egress, and local binding.
+- The relay's 83 Vitest files (700 tests), package/runtime/migration contracts (32 tests), typecheck, and standalone runtime build pass.
+- Normal-lifecycle CLI and relay tarballs install in an otherwise empty npm consumer. Its production audit reports zero critical and zero high findings; the seven remaining moderate aggregate nodes are the `@fastify/static`/Glob/Minimatch and MinIO/`stream-json` chains.
+- A clean staged prefix serves the packaged relay on loopback, completes a Prisma-backed authentication-status read, and shuts down cleanly. CLI help, version, doctor, and daemon-status commands work with an isolated Idle home.
 - A Node 22 production Expo export passes with the patched `image-size` release, and its 331 generated JavaScript bundles pass the release verifier.
 - A production relay image and its installed runtime dependency graph are scanned before deployment; the final scan receipt and deployment acceptance evidence are retained outside the public repository.
 
-`yarn audit --groups dependencies` reports no critical vulnerabilities. Its remaining high-severity entries are limited to advisories for `braces` and `node-forge` for which the registry reports no patched release. Those packages are build/mobile tooling and are excluded from the production relay image; they will be revisited when upstream publishes a fixed version.
+`yarn audit --groups dependencies` reports no critical vulnerabilities. Its remaining 14 high-severity resolution paths are confined to the Expo mobile workspace (`compression`, `node-forge`, and Expo CLI's Zod 3); they are not present in the packed CLI/relay consumer graph. They remain a separate mobile-toolchain maintenance item and must not be represented as a clean whole-monorepo audit.
