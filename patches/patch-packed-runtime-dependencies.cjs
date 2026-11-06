@@ -5,6 +5,25 @@ const crypto = require('node:crypto');
 const fs = require('node:fs');
 const path = require('node:path');
 
+const sandboxZod4DeclarationShim = `type V4Refined<
+    T extends z.ZodTypeAny,
+    _Output = unknown,
+    _Input = unknown,
+> = T;
+
+type V4Array<
+    T extends z.ZodTypeAny,
+    _Cardinality = unknown,
+> = z.ZodArray<T>;
+
+type V4Object<
+    Shape extends z.ZodRawShape,
+    _UnknownKeys = unknown,
+    _Catchall = unknown,
+    _Output = unknown,
+    _Input = unknown,
+> = z.ZodObject<Shape>;`;
+
 const reviewedPackages = [
   {
     name: '@anthropic-ai/sandbox-runtime',
@@ -19,17 +38,47 @@ const reviewedPackages = [
       },
       {
         relativePath: 'dist/sandbox/sandbox-config.js',
-        originalSha256: '90bb76ee7691d4fc7c96ed20a07fc936eee59893eefa2b1bb1a3719339f0794b',
-        patchedSha256: '7e5f3de871e4a122da479913abe90cb972cde5ce51e38d744003691d082d5192',
-        from: "from 'zod'",
-        to: "from 'zod/v3'",
+        patchedSha256: '6d9fe57dfb2fefa04b7493d92b165798c64f037e759627321df17c281c6d81b4',
+        inputs: [
+          {
+            sha256: '90bb76ee7691d4fc7c96ed20a07fc936eee59893eefa2b1bb1a3719339f0794b',
+            replacements: [{ from: "from 'zod'", to: "from 'zod/v4'" }],
+          },
+          {
+            sha256: '7e5f3de871e4a122da479913abe90cb972cde5ce51e38d744003691d082d5192',
+            replacements: [{ from: "from 'zod/v3'", to: "from 'zod/v4'" }],
+          },
+        ],
       },
       {
         relativePath: 'dist/sandbox/sandbox-config.d.ts',
-        originalSha256: 'b5867fcb0d3ee5a0212105fb6f0f4150fc0d278f5538f2226e6b0972dcaec124',
-        patchedSha256: 'a63ca906bf98bbb06dee2969f32ae68e73ba5b215dc9038acced336c23bea2f0',
-        from: "from 'zod'",
-        to: "from 'zod/v3'",
+        patchedSha256: 'ee01cf4b3a25637b4d7cdcafb58b371f273f8918ba4fa51144ba568c22c263fa',
+        inputs: [
+          {
+            sha256: 'b5867fcb0d3ee5a0212105fb6f0f4150fc0d278f5538f2226e6b0972dcaec124',
+            replacements: [
+              { from: 'z.ZodEffects', to: 'V4Refined', occurrences: 7 },
+              { from: 'z.ZodArray', to: 'V4Array', occurrences: 19 },
+              { from: 'z.ZodObject', to: 'V4Object', occurrences: 12 },
+              {
+                from: "import { z } from 'zod';",
+                to: `import { z } from 'zod/v4';\n\n${sandboxZod4DeclarationShim}`,
+              },
+            ],
+          },
+          {
+            sha256: 'a63ca906bf98bbb06dee2969f32ae68e73ba5b215dc9038acced336c23bea2f0',
+            replacements: [
+              { from: 'z.ZodEffects', to: 'V4Refined', occurrences: 7 },
+              { from: 'z.ZodArray', to: 'V4Array', occurrences: 19 },
+              { from: 'z.ZodObject', to: 'V4Object', occurrences: 12 },
+              {
+                from: "import { z } from 'zod/v3';",
+                to: `import { z } from 'zod/v4';\n\n${sandboxZod4DeclarationShim}`,
+              },
+            ],
+          },
+        ],
       },
     ],
   },
@@ -46,31 +95,59 @@ const reviewedPackages = [
       },
       {
         relativePath: 'dist/index.mjs',
-        originalSha256: '4c06e6c8db5a2100a53b733fb01590bc85b8f46982b66559d7f71295ed4537dd',
-        patchedSha256: '41e6483c2debc85479f14b7c23b1d0e859b1f986032f4dfd9f42b78c64b8f2c6',
-        from: "from 'zod'",
-        to: "from 'zod/v3'",
+        patchedSha256: 'b2b842339d9a1908f15e9be06a0fb05f8b1d970ad7737cb9aa8b2e66c0c3455e',
+        inputs: [
+          {
+            sha256: '4c06e6c8db5a2100a53b733fb01590bc85b8f46982b66559d7f71295ed4537dd',
+            replacements: [{ from: "from 'zod'", to: "from 'zod/v4'" }],
+          },
+          {
+            sha256: '41e6483c2debc85479f14b7c23b1d0e859b1f986032f4dfd9f42b78c64b8f2c6',
+            replacements: [{ from: "from 'zod/v3'", to: "from 'zod/v4'" }],
+          },
+        ],
       },
       {
         relativePath: 'dist/index.cjs',
-        originalSha256: '9fa6994ff871c4d057e3792f4334133bef76755a1a43c7763ebe37c58c5ffd52',
-        patchedSha256: 'b67d028a5727f6185f3d8ad8575783e62e04fc589f900ddde75a5f9c4dd4d542',
-        from: "require('zod')",
-        to: "require('zod/v3')",
+        patchedSha256: '095ba3615d7316411009060ca7dc362adf48dc864e82ea230baac0dc5cdeea98',
+        inputs: [
+          {
+            sha256: '9fa6994ff871c4d057e3792f4334133bef76755a1a43c7763ebe37c58c5ffd52',
+            replacements: [{ from: "require('zod')", to: "require('zod/v4')" }],
+          },
+          {
+            sha256: 'b67d028a5727f6185f3d8ad8575783e62e04fc589f900ddde75a5f9c4dd4d542',
+            replacements: [{ from: "require('zod/v3')", to: "require('zod/v4')" }],
+          },
+        ],
       },
       {
         relativePath: 'dist/index.d.mts',
-        originalSha256: '9f8d010bdfa66e57e6335d96ef0e12385764a8589e287676de87467f334c5576',
-        patchedSha256: '616605a7d39090f1cb9984204fe6876ee41c7db7ca8f212f4505f8acc0cc23ce',
-        from: "from 'zod'",
-        to: "from 'zod/v3'",
+        patchedSha256: '78dd8d17be2af0a07596b1d685f5ff9ec85d899427dc355f4c395d191719e227',
+        inputs: [
+          {
+            sha256: '9f8d010bdfa66e57e6335d96ef0e12385764a8589e287676de87467f334c5576',
+            replacements: [{ from: "from 'zod'", to: "from 'zod/v4'" }],
+          },
+          {
+            sha256: '616605a7d39090f1cb9984204fe6876ee41c7db7ca8f212f4505f8acc0cc23ce',
+            replacements: [{ from: "from 'zod/v3'", to: "from 'zod/v4'" }],
+          },
+        ],
       },
       {
         relativePath: 'dist/index.d.cts',
-        originalSha256: '9f8d010bdfa66e57e6335d96ef0e12385764a8589e287676de87467f334c5576',
-        patchedSha256: '616605a7d39090f1cb9984204fe6876ee41c7db7ca8f212f4505f8acc0cc23ce',
-        from: "from 'zod'",
-        to: "from 'zod/v3'",
+        patchedSha256: '78dd8d17be2af0a07596b1d685f5ff9ec85d899427dc355f4c395d191719e227',
+        inputs: [
+          {
+            sha256: '9f8d010bdfa66e57e6335d96ef0e12385764a8589e287676de87467f334c5576',
+            replacements: [{ from: "from 'zod'", to: "from 'zod/v4'" }],
+          },
+          {
+            sha256: '616605a7d39090f1cb9984204fe6876ee41c7db7ca8f212f4505f8acc0cc23ce',
+            replacements: [{ from: "from 'zod/v3'", to: "from 'zod/v4'" }],
+          },
+        ],
       },
     ],
   },
@@ -217,19 +294,30 @@ function applyPackedRuntimeDependencyPatches({
         const content = fs.readFileSync(target);
         const digest = sha256(content);
         if (digest === file.patchedSha256) continue;
-        if (digest !== file.originalSha256) {
+        const inputs = file.inputs ?? [{
+          sha256: file.originalSha256,
+          replacements: [{ from: file.from, to: file.to }],
+        }];
+        const input = inputs.find(candidate => candidate.sha256 === digest);
+        if (!input) {
           throw new Error(
             `${reviewedPackage.name}/${file.relativePath}: unreviewed upstream bytes`,
           );
         }
 
-        const source = content.toString('utf8');
-        if (countOccurrences(source, file.from) !== 1 || source.includes(file.to)) {
-          throw new Error(
-            `${reviewedPackage.name}/${file.relativePath}: reviewed source pattern drifted`,
-          );
+        let patched = content.toString('utf8');
+        for (const replacement of input.replacements) {
+          const occurrences = replacement.occurrences ?? 1;
+          if (
+            countOccurrences(patched, replacement.from) !== occurrences
+            || patched.includes(replacement.to)
+          ) {
+            throw new Error(
+              `${reviewedPackage.name}/${file.relativePath}: reviewed source pattern drifted`,
+            );
+          }
+          patched = patched.split(replacement.from).join(replacement.to);
         }
-        const patched = source.replace(file.from, file.to);
         if (sha256(patched) !== file.patchedSha256) {
           throw new Error(
             `${reviewedPackage.name}/${file.relativePath}: transform produced unexpected bytes`,

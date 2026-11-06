@@ -20,6 +20,11 @@ const appRoot = path.join(repoRoot, 'packages', 'idle-app');
 const cliRoot = path.join(repoRoot, 'packages', 'idle-cli');
 const e2eRoot = path.join(repoRoot, 'packages', 'idle-e2e');
 const wireRoot = path.join(repoRoot, 'packages', 'idle-wire');
+const packedRuntimeDependencyPatch = path.join(
+  repoRoot,
+  'patches',
+  'patch-packed-runtime-dependencies.cjs',
+);
 const upstreamLicenseNotice = 'Copyright (c) 2026 Happy Coder Contributors';
 
 const readJson = file => JSON.parse(fs.readFileSync(file, 'utf8'));
@@ -79,11 +84,25 @@ function listFiles(root, current = root) {
   return files.sort();
 }
 
-async function packAndExtract(packageRoot, tempRoot, label) {
+async function packAndExtract(
+  packageRoot,
+  tempRoot,
+  label,
+  { reviewedDependencyProfile } = {},
+) {
   const packDir = path.join(tempRoot, `${label}-pack`);
   const extractDir = path.join(tempRoot, `${label}-extract`);
   fs.mkdirSync(packDir, { recursive: true });
   fs.mkdirSync(extractDir, { recursive: true });
+  if (reviewedDependencyProfile) {
+    execFileSync(process.execPath, [
+      packedRuntimeDependencyPatch,
+      path.join(packageRoot, 'node_modules'),
+      reviewedDependencyProfile,
+    ], {
+      stdio: 'inherit',
+    });
+  }
   const packEnv = { ...process.env, npm_config_loglevel: 'silent' };
   for (const key of Object.keys(packEnv)) {
     if (key.toLowerCase() === 'npm_config_dry_run') {
@@ -174,6 +193,136 @@ function readPackedTextFiles(packed, include = () => true) {
       return contents.includes(0) ? '' : contents.toString('utf8');
     })
     .join('\n');
+}
+
+function assertPackedNativeZod4(server, cli) {
+  for (const [packed, packageName, relativePaths] of [
+    [cli, '@anthropic-ai/sandbox-runtime', [
+      'dist/sandbox/sandbox-config.js',
+      'dist/sandbox/sandbox-config.d.ts',
+    ]],
+    [server, 'privacy-kit', [
+      'dist/index.mjs',
+      'dist/index.cjs',
+      'dist/index.d.mts',
+      'dist/index.d.cts',
+    ]],
+  ]) {
+    for (const relativePath of relativePaths) {
+      const source = read(path.join(
+        packed.root,
+        'node_modules',
+        ...packageName.split('/'),
+        relativePath,
+      ));
+      assert.doesNotMatch(source, /['"]zod\/v3['"]/, `${packageName}/${relativePath}`);
+      assert.match(source, /['"]zod\/v4['"]/, `${packageName}/${relativePath}`);
+    }
+  }
+}
+
+function resolvePackedDependencyRoot(consumerRoot, packageName, parents) {
+  const packageSegments = packageName.split('/');
+  const candidates = [
+    path.join(consumerRoot, 'node_modules', ...packageSegments),
+    ...parents.map(parent => path.join(
+      consumerRoot,
+      'node_modules',
+      ...parent.split('/'),
+      'node_modules',
+      ...packageSegments,
+    )),
+  ];
+  const matches = candidates.filter(candidate => {
+    const manifest = path.join(candidate, 'package.json');
+    return fs.existsSync(manifest) && readJson(manifest).name === packageName;
+  });
+  assert.equal(
+    matches.length,
+    1,
+    `${packageName} must have one expected installed consumer location`,
+  );
+  return matches[0];
+}
+
+function assertPackedTypeConsumer(consumerRoot) {
+  const sandboxRoot = resolvePackedDependencyRoot(
+    consumerRoot,
+    '@anthropic-ai/sandbox-runtime',
+    ['idle-coder'],
+  );
+  const privacyRoot = resolvePackedDependencyRoot(
+    consumerRoot,
+    'privacy-kit',
+    ['@northglass/idle-server', 'idle-coder'],
+  );
+  const packedSpecifier = (packageRoot, relativePath) => {
+    const relative = path.relative(
+      consumerRoot,
+      path.join(packageRoot, relativePath),
+    ).split(path.sep).join('/');
+    return relative.startsWith('.') ? relative : `./${relative}`;
+  };
+  const sandboxSpecifier = packedSpecifier(
+    sandboxRoot,
+    'dist/sandbox/sandbox-config.js',
+  );
+  const privacyEsmSpecifier = packedSpecifier(privacyRoot, 'dist/index.mjs');
+  const privacyCjsSpecifier = packedSpecifier(privacyRoot, 'dist/index.cjs');
+  const esmConsumer = path.join(consumerRoot, 'packed-types.mts');
+  const cjsConsumer = path.join(consumerRoot, 'packed-types.cts');
+  fs.writeFileSync(esmConsumer, `
+import { z } from 'zod/v4';
+import {
+  NetworkConfigSchema,
+  SandboxRuntimeConfigSchema,
+  type SandboxRuntimeConfig,
+} from '${sandboxSpecifier}';
+import { request } from '${privacyEsmSpecifier}';
+
+const config: SandboxRuntimeConfig = {
+  network: { allowedDomains: ['example.com'], deniedDomains: [] },
+  filesystem: { denyRead: ['/private'], allowWrite: ['/tmp'], denyWrite: ['/.ssh'] },
+};
+SandboxRuntimeConfigSchema.parse(config);
+NetworkConfigSchema.shape.allowedDomains.parse(['example.com']);
+void request.decodeRequest(new Uint8Array(), z.object({ accepted: z.boolean() }));
+`);
+  fs.writeFileSync(cjsConsumer, `
+import z = require('zod/v4');
+import privacy = require('${privacyCjsSpecifier}');
+
+void privacy.request.decodeRequest(
+  new Uint8Array(),
+  z.object({ accepted: z.boolean() }),
+);
+`);
+  const tsconfig = path.join(consumerRoot, 'tsconfig.packed-types.json');
+  fs.writeFileSync(tsconfig, `${JSON.stringify({
+    compilerOptions: {
+      baseUrl: consumerRoot,
+      module: 'NodeNext',
+      moduleResolution: 'NodeNext',
+      noEmit: true,
+      skipLibCheck: false,
+      strict: true,
+      target: 'ES2022',
+      typeRoots: [path.join(repoRoot, 'node_modules/@types')],
+      types: ['node'],
+    },
+    files: [esmConsumer, cjsConsumer],
+  }, null, 2)}\n`);
+  const tsc = require.resolve('typescript/bin/tsc', { paths: [repoRoot] });
+  const result = spawnSync(process.execPath, [tsc, '--project', tsconfig], {
+    cwd: consumerRoot,
+    encoding: 'utf8',
+    maxBuffer: 64 * 1024 * 1024,
+  });
+  assert.equal(
+    result.status,
+    0,
+    `packed declaration consumer failed with skipLibCheck=false:\n${result.stdout}\n${result.stderr}`,
+  );
 }
 
 function assertPackedScriptDependencies(packed, label) {
@@ -550,12 +699,17 @@ test('actual npm tarballs contain licenses and no private build artifacts', asyn
 
   const server = await packAndExtract(serverRoot, tempRoot, 'server');
   const agent = await packAndExtract(agentRoot, tempRoot, 'agent');
-  const cli = await packAndExtract(cliRoot, tempRoot, 'cli');
+  const cli = await packAndExtract(cliRoot, tempRoot, 'cli', {
+    reviewedDependencyProfile: 'cli',
+  });
   const wire = await packAndExtract(wireRoot, tempRoot, 'wire');
+  const consumerRoot = path.join(tempRoot, 'consumer');
   auditPackedConsumer({
-    consumerRoot: path.join(tempRoot, 'consumer'),
+    consumerRoot,
     tarballs: [server.tarball, cli.tarball],
   });
+  assertPackedNativeZod4(server, cli);
+  assertPackedTypeConsumer(consumerRoot);
 
   assert.ok(
     cli.files.includes('scripts/claude_local_launcher.cjs'),
