@@ -9,7 +9,7 @@ const packageRoot = path.resolve(__dirname, '..');
 const MAX_WINDOWS_PRISMA_ATTEMPTS = 3;
 const WINDOWS_PRISMA_RETRY_DELAY_MS = 500;
 const WINDOWS_PRISMA_LOCK_PATTERN =
-  /\b(?:EPERM|EBUSY)\b[\s\S]{0,8192}\bschema-engine-windows\.exe\b/i;
+  /\b(?:EPERM|EBUSY)\b[\s\S]{0,8192}\b(?:schema-engine-windows\.exe|query_engine-windows\.dll\.node)\b/i;
 
 function resolveOptional(request) {
   try {
