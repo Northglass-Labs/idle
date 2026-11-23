@@ -2,7 +2,7 @@
 # Uses PGlite (embedded Postgres), local filesystem storage, no Redis
 
 # Stage 1: build the shared wire package without installing unrelated workspaces.
-FROM node:22-alpine@sha256:fe4f6d74e20370acb04ad889077d14d0f64a9c8ea6a42bc60cddf1e844699914 AS wire-builder
+FROM node:22-alpine@sha256:1314fb30ec37592d5845e5a160d522c0e680972aa534549940b8d73bde88481a AS wire-builder
 
 WORKDIR /wire
 COPY package.json /workspace-package.json
@@ -14,7 +14,7 @@ COPY packages/idle-wire ./
 RUN yarn build
 
 # Stage 2: build and type-check the relay in an isolated package install.
-FROM node:22-alpine@sha256:fe4f6d74e20370acb04ad889077d14d0f64a9c8ea6a42bc60cddf1e844699914 AS builder
+FROM node:22-alpine@sha256:1314fb30ec37592d5845e5a160d522c0e680972aa534549940b8d73bde88481a AS builder
 
 RUN apk add --no-cache python3 make g++
 WORKDIR /build
@@ -35,7 +35,7 @@ RUN yarn build
 # Stage 3: install only the relay's production dependencies. Keeping this out
 # of the monorepo workspace prevents the mobile/web dependency graph from being
 # copied into the production relay image.
-FROM node:22-alpine@sha256:fe4f6d74e20370acb04ad889077d14d0f64a9c8ea6a42bc60cddf1e844699914 AS production-deps
+FROM node:22-alpine@sha256:1314fb30ec37592d5845e5a160d522c0e680972aa534549940b8d73bde88481a AS production-deps
 
 WORKDIR /runtime
 
@@ -62,7 +62,7 @@ COPY --from=builder /build/node_modules/.prisma /runtime/node_modules/.prisma
 COPY --from=builder /build/node_modules/@prisma/client /runtime/node_modules/@prisma/client
 
 # Stage 4: minimal, non-root runtime
-FROM node:22-alpine@sha256:fe4f6d74e20370acb04ad889077d14d0f64a9c8ea6a42bc60cddf1e844699914 AS runner
+FROM node:22-alpine@sha256:1314fb30ec37592d5845e5a160d522c0e680972aa534549940b8d73bde88481a AS runner
 
 WORKDIR /repo
 
