@@ -40,7 +40,9 @@ session.
 
 ## Operations and project policy
 
-- [Deployment targets](deploy-targets/), [security hardening](deploy-targets/security-hardening.md),
+- [Delivery](DELIVERY.md) — how releases reach the hosted service, npm, and
+  TestFlight
+- Self-hosting [deployment targets](deploy-targets/), [security hardening](deploy-targets/security-hardening.md),
   and [monitoring](monitoring.md)
 - [Optional product analytics](product-analytics.md)
 - [Product direction](ROADMAP.md)
