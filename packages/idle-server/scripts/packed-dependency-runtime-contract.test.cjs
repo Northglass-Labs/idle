@@ -142,6 +142,40 @@ test('privacy-kit loads its Nitro schemas through native Zod 4', async () => {
   );
 });
 
+async function firstBucketNotification(NotificationPoller, record) {
+  const { Readable } = require('node:stream');
+  const client = {
+    region: 'us-east-1',
+    makeRequestAsync: async () => Readable.from(
+      [Buffer.from(`${JSON.stringify({ Records: [record] })}\n`)],
+      { objectMode: false },
+    ),
+  };
+  const poller = new NotificationPoller(client, 'idle-contract', '', '', []);
+  return new Promise((resolve, reject) => {
+    poller.on('error', reject);
+    poller.on('notification', (notification) => {
+      poller.stop();
+      resolve(notification);
+    });
+    poller.start();
+  });
+}
+
+test('MinIO parses bucket notifications through the reviewed stream-json v3 adapter', async () => {
+  assert.match(manifest('stream-json').version, /^3\./);
+  const record = {
+    eventName: 's3:ObjectCreated:Put',
+    s3: { bucket: { name: 'idle-contract' }, object: { key: 'sessions/account-1/object.enc' } },
+  };
+
+  const commonJs = require('minio');
+  assert.deepEqual(await firstBucketNotification(commonJs.NotificationPoller, record), record);
+
+  const esm = await import('minio');
+  assert.deepEqual(await firstBucketNotification(esm.NotificationPoller, record), record);
+});
+
 test('MinIO generates signed S3 object URLs through the fixed query-string graph', async () => {
   const { Client } = require('minio');
   const client = new Client({

@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
 import { createRequire } from 'node:module';
 import fs from 'node:fs';
 import os from 'node:os';
@@ -130,6 +131,10 @@ function copyReviewedTree({ state = 'upstream' } = {}) {
     ['privacy-kit', 'dist/index.d.cts', "from 'zod/v3'", "from 'zod'"],
     ['query-string', 'package.json', '"decode-uri-component": "^0.5.1"', '"decode-uri-component": "^0.2.2"'],
     ['@prisma/config', 'package.json', '"deepmerge-ts": "8.0.2"', '"deepmerge-ts": "7.1.5"'],
+    ['minio', 'dist/main/notification.js', 'require("stream-json/jsonl/parser.js")', 'require("stream-json/jsonl/Parser.js")'],
+    ['minio', 'dist/main/notification.js', 'const asm = _Parser.parser.asStream();', 'const asm = _Parser.make();'],
+    ['minio', 'dist/esm/notification.mjs', "from 'stream-json/jsonl/parser.js'", "from 'stream-json/jsonl/Parser.js'"],
+    ['minio', 'dist/esm/notification.mjs', 'const asm = jsonLineParser.asStream();', 'const asm = jsonLineParser.make();'],
   ]) {
     const target = path.join(packageRoot(nodeModulesRoot, packageName), relativePath);
     const content = fs.readFileSync(target, 'utf8');
@@ -177,7 +182,7 @@ test('reviewed packed dependencies receive only the compatibility transforms con
         nodeModulesRoots: [fixture.nodeModulesRoot],
         logger: { log() {} },
       }),
-      { packages: 6, files: 10 },
+      { packages: 6, files: 12 },
     );
 
     const sandbox = readJson(path.join(
@@ -336,5 +341,40 @@ test('the packed dependency transform rejects unreviewed versions', () => {
     );
   } finally {
     fixture.cleanup();
+  }
+});
+
+test('the packed MinIO transform writes the same bytes as the production image patch', () => {
+  const fixture = copyReviewedTree();
+  const imageScratch = fs.mkdtempSync(path.join(os.tmpdir(), 'idle-minio-image-patch-'));
+  try {
+    const imageNodeModules = path.join(imageScratch, 'node_modules');
+    fs.cpSync(
+      packageRoot(fixture.nodeModulesRoot, 'minio'),
+      packageRoot(imageNodeModules, 'minio'),
+      { recursive: true, verbatimSymlinks: true },
+    );
+    const imagePatch = spawnSync(
+      process.execPath,
+      [path.join(repoRoot, 'patches', 'patch-minio-stream-json-v3.cjs'), imageNodeModules],
+      { encoding: 'utf8' },
+    );
+    assert.equal(imagePatch.status, 0, imagePatch.stderr);
+
+    applyPackedRuntimeDependencyPatches({
+      nodeModulesRoots: [fixture.nodeModulesRoot],
+      packageNames: ['minio'],
+      logger: { log() {} },
+    });
+    for (const relativePath of ['dist/main/notification.js', 'dist/esm/notification.mjs']) {
+      assert.equal(
+        fs.readFileSync(path.join(packageRoot(fixture.nodeModulesRoot, 'minio'), relativePath), 'utf8'),
+        fs.readFileSync(path.join(packageRoot(imageNodeModules, 'minio'), relativePath), 'utf8'),
+        relativePath,
+      );
+    }
+  } finally {
+    fixture.cleanup();
+    fs.rmSync(imageScratch, { recursive: true, force: true });
   }
 });
