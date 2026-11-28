@@ -166,7 +166,8 @@ unrelated upstream notes or identity metadata into Idle.
 
 Import deltas cannot add, remove, rename, or modify either policy file, the
 upstream/documentation/metadata guards and their boundary tests, `package.json`,
-GitHub workflows, Gitleaks policy, attribution files, or package licenses. A
+`scripts/postinstall.cjs`, root `patches/*.cjs`, GitHub workflows, Gitleaks
+policy, attribution files, or package licenses. A
 review-only or baseline-only policy update uses `--policy-diff`; mixed policy
 and product changes fail. The one exception is the isolated final exact-count
 commit described above, which cannot add review records or weaken controls.
