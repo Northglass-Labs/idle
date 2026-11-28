@@ -1,5 +1,9 @@
 # Deployment targets
 
+These guides are for people who run their own Idle relay or web app. They are
+not how Northglass deploys its hosted service; [Delivery](../DELIVERY.md)
+describes the release paths this repository supports.
+
 Idle's relay is a stateful service: one Node.js process serves HTTP and
 Socket.IO while PGlite stores data under `/data`. Every supported target uses
 the root `Dockerfile`; the platform-specific files only describe how to run the

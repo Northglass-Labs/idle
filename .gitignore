@@ -49,7 +49,12 @@ AGENTS.md
 **/AGENTS.md
 CLAUDE.md
 **/CLAUDE.md
+!/AGENTS.md
+!/CLAUDE.md
 CLAUDE.local.md
+GEMINI.md
+**/GEMINI.md
+.github/copilot-instructions.md
 .agents/
 **/.agents/
 .claude/
@@ -58,6 +63,8 @@ CLAUDE.local.md
 **/.codex/
 .mcp.json
 **/.mcp.json
+.cursorrules
+**/.cursorrules
 .worktrees/
 .dev/worktree/
 .plan

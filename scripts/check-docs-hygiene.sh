@@ -38,7 +38,7 @@ while IFS= read -r file; do
       report "$file is an internal service inventory" ;;
     docs/[0-9][0-9][0-9][0-9]-[0-9][0-9]-*|docs/*/[0-9][0-9][0-9][0-9]-[0-9][0-9]-*)
       report "$file is a dated internal document" ;;
-    AGENTS.md|*/AGENTS.md|*/**/AGENTS.md|CLAUDE.md|*/CLAUDE.md|*/**/CLAUDE.md|.agents/*|*/.agents/*|.claude/*|*/.claude/*|.codex/*|*/.codex/*|.mcp.json|*/.mcp.json|.cursorrules|*/.cursorrules|*/**/.cursorrules)
+    */AGENTS.md|*/**/AGENTS.md|*/CLAUDE.md|*/**/CLAUDE.md|CLAUDE.local.md|*/CLAUDE.local.md|GEMINI.md|*/GEMINI.md|.github/copilot-instructions.md|.agents/*|*/.agents/*|.claude/*|*/.claude/*|.codex/*|*/.codex/*|.mcp.json|*/.mcp.json|.cursorrules|*/.cursorrules|*/**/.cursorrules)
       report "$file is maintainer-local agent/tool configuration" ;;
     scripts/check-testflight.sh|scripts/fix-codesign-keychain.sh|scripts/patch-eas-keychain.cjs|scripts/refresh-local-idle.sh|scripts/release-build-local.sh|scripts/release-build.sh|scripts/release.cjs|scripts/setup-local-signing.sh|packages/idle-app/.eas/workflows/*|packages/idle-app/release-dev.sh|packages/idle-app/release-production.sh|packages/idle-app/release.cjs)
       report "$file is production release automation" ;;

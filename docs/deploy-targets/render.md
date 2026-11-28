@@ -1,5 +1,8 @@
 # Deploy the Idle relay to Render
 
+These steps are for running your own Idle relay. They are not how Northglass
+deploys its hosted service; [Delivery](../DELIVERY.md) describes that.
+
 The root `render.yaml` is a Render Blueprint for the relay image and its
 persistent disk. Review the file in your fork before importing it; a Blueprint
 is infrastructure configuration and can create billable resources.
