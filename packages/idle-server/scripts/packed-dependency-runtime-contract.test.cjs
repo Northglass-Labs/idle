@@ -1,11 +1,15 @@
 'use strict';
 
 const assert = require('node:assert/strict');
+const { spawnSync } = require('node:child_process');
+const crypto = require('node:crypto');
 const fs = require('node:fs');
+const os = require('node:os');
 const path = require('node:path');
 const test = require('node:test');
 
 const serverRoot = path.resolve(__dirname, '..');
+const repoRoot = path.resolve(serverRoot, '..', '..');
 const nodeModulesRoot = path.join(serverRoot, 'node_modules');
 
 function manifest(packageName) {
@@ -34,6 +38,10 @@ test('the bundled server graph declares and installs only fixed nested versions'
 
   assert.equal(manifest('@prisma/config').dependencies['deepmerge-ts'], '8.0.2');
   assert.equal(manifest('deepmerge-ts').version, '8.0.2');
+
+  // The bundled MinIO runs stream-json 3, so its manifest must ask for it.
+  assert.equal(manifest('minio').dependencies['stream-json'], '^3.6.0');
+  assert.match(manifest('stream-json').version, /^3\.(?:[6-9]|[1-9][0-9])\.[0-9]+$/);
 });
 
 test('every reviewed privacy-kit representation imports native Zod 4', () => {
@@ -162,7 +170,7 @@ async function firstBucketNotification(NotificationPoller, record) {
   });
 }
 
-test('MinIO parses bucket notifications through the reviewed stream-json v3 adapter', async () => {
+test('MinIO parses bucket notifications through the reviewed stream-json v3 adapter', { timeout: 10_000 }, async () => {
   assert.match(manifest('stream-json').version, /^3\./);
   const record = {
     eventName: 's3:ObjectCreated:Put',
@@ -174,6 +182,54 @@ test('MinIO parses bucket notifications through the reviewed stream-json v3 adap
 
   const esm = await import('minio');
   assert.deepEqual(await firstBucketNotification(esm.NotificationPoller, record), record);
+});
+
+test('the packed MinIO transform writes the same bytes as the production image patch', { timeout: 10_000 }, () => {
+  const { reviewedPackages } = require(path.join(repoRoot, 'patches', 'patch-packed-runtime-dependencies.cjs'));
+  const sourceFiles = reviewedPackages
+    .find(reviewedPackage => reviewedPackage.name === 'minio')
+    .files.filter(file => file.relativePath.startsWith('dist/'));
+  assert.deepEqual(
+    sourceFiles.map(file => file.relativePath).sort(),
+    ['dist/esm/notification.mjs', 'dist/main/notification.js'],
+  );
+
+  const scratch = fs.mkdtempSync(path.join(os.tmpdir(), 'idle-minio-image-patch-'));
+  try {
+    const imageNodeModules = path.join(scratch, 'node_modules');
+    for (const file of sourceFiles) {
+      // Rebuild the reviewed upstream bytes from the installed, transformed copy.
+      const [input] = file.inputs;
+      let upstream = packageSource('minio', file.relativePath);
+      for (const replacement of [...input.replacements].reverse()) {
+        upstream = upstream.split(replacement.to).join(replacement.from);
+      }
+      assert.equal(
+        crypto.createHash('sha256').update(upstream).digest('hex'),
+        input.sha256,
+        `${file.relativePath} must reverse to the reviewed upstream bytes`,
+      );
+      const target = path.join(imageNodeModules, 'minio', file.relativePath);
+      fs.mkdirSync(path.dirname(target), { recursive: true });
+      fs.writeFileSync(target, upstream);
+    }
+
+    const imagePatch = spawnSync(
+      process.execPath,
+      [path.join(repoRoot, 'patches', 'patch-minio-stream-json-v3.cjs'), imageNodeModules],
+      { encoding: 'utf8' },
+    );
+    assert.equal(imagePatch.status, 0, imagePatch.stderr);
+    for (const file of sourceFiles) {
+      assert.equal(
+        fs.readFileSync(path.join(imageNodeModules, 'minio', file.relativePath), 'utf8'),
+        packageSource('minio', file.relativePath),
+        file.relativePath,
+      );
+    }
+  } finally {
+    fs.rmSync(scratch, { recursive: true, force: true });
+  }
 });
 
 test('MinIO generates signed S3 object URLs through the fixed query-string graph', async () => {

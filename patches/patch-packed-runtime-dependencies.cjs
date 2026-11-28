@@ -184,10 +184,10 @@ const reviewedPackages = [
     ],
   },
   {
-    // The root stream-json resolution moves MinIO to stream-json 3, whose
-    // JSONL parser is a lowercase module with an asStream() factory. These are
-    // the same reviewed transforms as patch-minio-stream-json-v3.cjs, which
-    // the production image applies after its isolated install.
+    // The root **/minio/stream-json resolution moves MinIO to stream-json 3,
+    // whose JSONL parser is a lowercase module with an asStream() factory. The
+    // two notification transforms are the same reviewed ones the production
+    // image applies with patch-minio-stream-json-v3.cjs after its install.
     name: 'minio',
     version: '8.0.7',
     files: [
@@ -229,11 +229,14 @@ const reviewedPackages = [
           },
         ],
       },
-    ],
-    checks: [
       {
+        // The server package bundles MinIO with stream-json 3, so its manifest
+        // must declare the version it actually runs.
         relativePath: 'package.json',
-        sha256: '06e434631e49ceb17eb8ad566cf59487733302648d17ccacf1c15d433aa94270',
+        originalSha256: '06e434631e49ceb17eb8ad566cf59487733302648d17ccacf1c15d433aa94270',
+        patchedSha256: '201980b545d437dcd8157b81fff9623436de19883549e5c8e55ccf93850436f8',
+        from: '"stream-json": "^1.8.0"',
+        to: '"stream-json": "^3.6.0"',
       },
     ],
   },
