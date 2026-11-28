@@ -448,6 +448,84 @@ test('server postinstall recognizes only bounded Windows Prisma engine locks as 
   );
 });
 
+test('server postinstall recognizes the observed Windows query-engine DLL rename lock', () => {
+  const diagnostic = "Error: EPERM: operation not permitted, rename 'C:\\fixture\\query_engine-windows.dll.node.tmp1496' -> 'C:\\fixture\\query_engine-windows.dll.node'";
+  const locked = { status: 1, stderr: Buffer.from(diagnostic) };
+
+  assert.equal(isRetryableWindowsPrismaLock(locked, 'win32'), true);
+  assert.equal(isRetryableWindowsPrismaLock(locked, 'linux'), false);
+  assert.equal(isRetryableWindowsPrismaLock(locked, 'darwin'), false);
+
+  for (const stderr of [
+    'Error: EPERM while replacing unrelated-windows.dll.node',
+    'Error: EBUSY while replacing another-engine.dll.node',
+    'Error: query_engine-windows.dll.node failed schema validation',
+    `Error: EPERM ${'x'.repeat(8193)} query_engine-windows.dll.node`,
+  ]) {
+    assert.equal(isRetryableWindowsPrismaLock({ status: 1, stderr }, 'win32'), false);
+  }
+});
+
+test('server postinstall retries the observed Windows query-engine DLL rename lock', () => {
+  const results = [
+    {
+      status: 1,
+      stderr: Buffer.from("Error: EPERM: operation not permitted, rename 'C:\\fixture\\query_engine-windows.dll.node.tmp1496' -> 'C:\\fixture\\query_engine-windows.dll.node'"),
+    },
+    { status: 0, stderr: Buffer.alloc(0) },
+  ];
+  const delays = [];
+  const output = [];
+  let attempts = 0;
+
+  const result = runPrismaGeneratorWithRetry({
+    prismaCli: 'prisma-cli.js',
+    generatorArgs: ['generate'],
+    environment: {},
+    platform: 'win32',
+    spawn: () => {
+      attempts += 1;
+      return results.shift();
+    },
+    sleep: delay => delays.push(delay),
+    stderr: { write: value => output.push(String(value)) },
+  });
+
+  assert.equal(result.status, 0);
+  assert.equal(attempts, 2);
+  assert.deepEqual(delays, [500]);
+  assert.match(output.join(''), /temporarily locked; retrying client generation \(1\/3\)/);
+  assert.doesNotMatch(output.join(''), /fixture|query_engine-windows/);
+});
+
+test('server postinstall preserves a persistent Windows query-engine DLL lock failure', () => {
+  const failure = {
+    status: 1,
+    stderr: Buffer.from('Error: EBUSY while replacing query_engine-windows.dll.node'),
+  };
+  const delays = [];
+  const output = [];
+  let attempts = 0;
+
+  const result = runPrismaGeneratorWithRetry({
+    prismaCli: 'prisma-cli.js',
+    generatorArgs: ['generate'],
+    environment: {},
+    platform: 'win32',
+    spawn: () => {
+      attempts += 1;
+      return failure;
+    },
+    sleep: delay => delays.push(delay),
+    stderr: { write: value => output.push(String(value)) },
+  });
+
+  assert.equal(result, failure);
+  assert.equal(attempts, MAX_WINDOWS_PRISMA_ATTEMPTS);
+  assert.deepEqual(delays, [500, 1000]);
+  assert.equal(output.at(-1), failure.stderr.toString('utf8'));
+});
+
 test('server postinstall retries a transient Windows engine lock and suppresses its raw path', () => {
   const results = [
     {
