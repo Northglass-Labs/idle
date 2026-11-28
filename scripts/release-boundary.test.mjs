@@ -1,4 +1,6 @@
 import assert from 'node:assert/strict';
+import { execFileSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import test from 'node:test';
@@ -559,4 +561,60 @@ test('publishing is CI-gated and local release bots stay outside the public pack
   ]) {
     assert.equal(pathExistsOrIsSymlink(relativePath), false, relativePath);
   }
+});
+
+// The root agent instructions are public and steer automated contributors, so
+// this protected test pins their exact bytes: editing either file also needs a
+// maintainer-reviewed change here.
+const AGENT_INSTRUCTION_SHA256 = {
+  'AGENTS.md': 'bcf4ae709d6cd887186b4d4a63d7e51897ffb5766c69652b95c682358dae6e9f',
+  'CLAUDE.md': '336cc4fbf19beaada7ccf9986414fa91851a8d7a07dfb3ccbe800a69eed0ab49',
+};
+
+test('only the pinned root agent instructions are public and protected', () => {
+  const tracked = execFileSync('git', [
+    'ls-files',
+    '--',
+    ':(glob)**/AGENTS.md',
+    ':(glob)**/CLAUDE.md',
+    ':(glob)**/CLAUDE.local.md',
+    ':(glob)**/GEMINI.md',
+    '.github/copilot-instructions.md',
+  ], { cwd: repoRoot, encoding: 'utf8' }).trim().split('\n').filter(Boolean).sort();
+  assert.deepEqual(tracked, ['AGENTS.md', 'CLAUDE.md']);
+  assert.equal(read('CLAUDE.md'), '@AGENTS.md\n');
+  for (const [relativePath, digest] of Object.entries(AGENT_INSTRUCTION_SHA256)) {
+    const bytes = fs.readFileSync(path.join(repoRoot, relativePath));
+    assert.equal(createHash('sha256').update(bytes).digest('hex'), digest, relativePath);
+  }
+
+  const guard = read('scripts/check-upstream-cruft.mjs');
+  const protectedStart = guard.indexOf('const PROTECTED_IMPORT_FILES = new Set([');
+  const protectedFiles = guard.slice(protectedStart, guard.indexOf(']);', protectedStart));
+  for (const relativePath of ['AGENTS.md', 'CLAUDE.md']) {
+    assert.ok(protectedFiles.includes(`'${relativePath}'`), `${relativePath} must be a protected import control`);
+  }
+
+  const hygiene = read('scripts/check-docs-hygiene.sh');
+  const agentRule = hygiene.split('\n').find(line => line.includes('*/AGENTS.md'));
+  assert.ok(agentRule, 'the hygiene check must keep rejecting nested agent files');
+  const alternatives = agentRule.trim().replace(/\)$/, '').split('|');
+  for (const rejected of [
+    '*/AGENTS.md',
+    '*/CLAUDE.md',
+    'CLAUDE.local.md',
+    '*/CLAUDE.local.md',
+    'GEMINI.md',
+    '*/GEMINI.md',
+    '.github/copilot-instructions.md',
+    '.claude/*',
+    '.codex/*',
+    '.agents/*',
+    '.mcp.json',
+    '.cursorrules',
+  ]) {
+    assert.ok(alternatives.includes(rejected), rejected);
+  }
+  assert.equal(alternatives.includes('AGENTS.md'), false);
+  assert.equal(alternatives.includes('CLAUDE.md'), false);
 });

@@ -23,9 +23,11 @@ and pull request text.
   decision records, or incident notes.
 - Commit as `hello@northglass.io` with the Northglass name, or with a GitHub
   `users.noreply.github.com` address.
-- This file and `CLAUDE.md` are the only tracked agent files. Keep local agent
-  state (`.claude/`, `.codex/`, `.agents/`, `.mcp.json`, and nested agent files)
-  out of the tree.
+- This file and `CLAUDE.md` are the only tracked agent files, and both are
+  protected: changing either needs a maintainer's review and merge. Keep local
+  agent state out of the tree, including `.claude/`, `.codex/`, `.agents/`,
+  `.mcp.json`, `CLAUDE.local.md`, `GEMINI.md`,
+  `.github/copilot-instructions.md`, and nested agent files.
 - Before pushing, run `bash scripts/check-docs-hygiene.sh` and
   `node scripts/verify-upstream-import.mjs --ci-range <base> <head>`.
 

@@ -52,6 +52,9 @@ CLAUDE.md
 !/AGENTS.md
 !/CLAUDE.md
 CLAUDE.local.md
+GEMINI.md
+**/GEMINI.md
+.github/copilot-instructions.md
 .agents/
 **/.agents/
 .claude/

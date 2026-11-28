@@ -146,31 +146,3 @@ test('every mobile E2E flow belongs to a runnable public suite', () => {
   assert.match(authenticatedRunner, /--device/);
   assert.match(authenticatedRunner, /IDLE_RELEASE_LIVE_TEST/);
 });
-
-test('only the root agent instructions are public, and CLAUDE.md imports AGENTS.md', () => {
-  const tracked = execFileSync(
-    'git',
-    ['ls-files', '--', ':(glob)**/AGENTS.md', ':(glob)**/CLAUDE.md'],
-    { cwd: repoRoot, encoding: 'utf8' },
-  ).trim().split('\n').filter(Boolean).sort();
-  assert.deepEqual(tracked, ['AGENTS.md', 'CLAUDE.md']);
-  assert.equal(read('CLAUDE.md').trim(), '@AGENTS.md');
-
-  const hygiene = read('scripts/check-docs-hygiene.sh');
-  const agentRule = hygiene.split('\n').find(line => line.includes('*/AGENTS.md'));
-  assert.ok(agentRule, 'the hygiene check must keep rejecting nested agent files');
-  const alternatives = agentRule.trim().replace(/\)$/, '').split('|');
-  for (const rejected of ['*/AGENTS.md', '*/CLAUDE.md', '.claude/*', '.codex/*', '.agents/*', '.mcp.json', '.cursorrules']) {
-    assert.ok(alternatives.includes(rejected), rejected);
-  }
-  assert.equal(alternatives.includes('AGENTS.md'), false);
-  assert.equal(alternatives.includes('CLAUDE.md'), false);
-
-  const agents = read('AGENTS.md');
-  assert.doesNotMatch(agents, /\b(?:[0-9]{1,3}\.){3}[0-9]{1,3}\b/, 'no server addresses');
-  assert.doesNotMatch(agents, /idle-api\.|\/var\/www|ADR-[0-9]{3}|docs\/adr\//i);
-  for (const link of agents.matchAll(/\]\(([^)#]+)(?:#[^)]*)?\)/g)) {
-    if (/^https?:/.test(link[1])) continue;
-    assert.ok(fs.existsSync(path.join(repoRoot, link[1])), `AGENTS.md links to ${link[1]}`);
-  }
-});

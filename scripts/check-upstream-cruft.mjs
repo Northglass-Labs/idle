@@ -27,6 +27,8 @@ const POLICY_FILES = new Set([
 ]);
 const PROTECTED_IMPORT_FILES = new Set([
   'package.json',
+  'AGENTS.md',
+  'CLAUDE.md',
   '.gitleaks.toml',
   '.gitleaksignore',
   '.github/CODEOWNERS',
