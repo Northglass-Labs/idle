@@ -177,9 +177,10 @@ boundary.
 In practice, the public hygiene and trusted policy checks hold contributors,
 human or automated, to these rules:
 
-- Agent and editor configuration (`AGENTS.md`, `CLAUDE.md`, `.claude/`,
-  `.codex/`, `.agents/`, `.mcp.json`, `.cursorrules`) stays on the maintainer's
-  machine. Git ignores it, and the hygiene check rejects it.
+- The root [`AGENTS.md`](../AGENTS.md) and `CLAUDE.md` are the only tracked
+  agent instructions. Other agent and editor configuration (nested agent files,
+  `.claude/`, `.codex/`, `.agents/`, `.mcp.json`, `.cursorrules`) stays on the
+  maintainer's machine. Git ignores it, and the hygiene check rejects it.
 - Commit and contact identities are `hello@northglass.io` with the Northglass
   name, or a GitHub-generated `users.noreply.github.com` address.
 - Public text names no hosted-service host, server address, host path, or
