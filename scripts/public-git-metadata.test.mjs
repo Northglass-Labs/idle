@@ -37,8 +37,8 @@ function run(cwd, args) {
   });
 }
 
-function writeObject(cwd, type, contents) {
-  const result = spawnSync('git', ['hash-object', '-t', type, '-w', '--stdin'], {
+function writeObject(cwd, type, contents, { literally = false } = {}) {
+  const result = spawnSync('git', ['hash-object', '-t', type, '-w', ...(literally ? ['--literally'] : []), '--stdin'], {
     cwd,
     encoding: 'utf8',
     input: contents,
@@ -188,6 +188,76 @@ test('range scan rejects the Dependabot sign-off address outside its exact trail
     assert.notEqual(result.status, 0, label);
     assert.match(result.output, /commit-metadata:unapproved-email/, label);
     assert.doesNotMatch(result.output, /PRIVATE_(?:SUFFIX|REPORTER)_MARKER|personal\.invalid|support@/i, label);
+  }
+});
+
+const GITHUB_SERVICE_IDENTITY = `GitHub <${GITHUB_SERVICE_EMAIL}>`;
+const DEPENDABOT_AUTHOR = `${DEPENDABOT_NAME} <${DEPENDABOT_EMAIL}>`;
+const CONTRIBUTOR = 'Public Contributor <12345+contributor@users.noreply.github.com>';
+
+// Writes an exact commit object, so whitespace, line endings and repeated
+// headers reach the scanner byte for byte.
+function scanRawCommit({
+  authors = [DEPENDABOT_AUTHOR],
+  committers = [GITHUB_SERVICE_IDENTITY],
+  extraHeaders = [],
+  message,
+}) {
+  return withRepo((root) => {
+    const base = git(root, ['rev-parse', 'HEAD']);
+    const tree = git(root, ['rev-parse', 'HEAD^{tree}']);
+    const head = writeObject(root, 'commit', [
+      `tree ${tree}`,
+      `parent ${base}`,
+      ...authors.map((author) => `author ${author} 1700000000 +0000`),
+      ...committers.map((committer) => `committer ${committer} 1700000000 +0000`),
+      ...extraHeaders,
+      '',
+      message,
+    ].join('\n'), { literally: true });
+    const result = run(root, ['--range', base, head]);
+    return { status: result.status, output: `${result.stdout}\n${result.stderr}` };
+  });
+}
+
+test('Dependabot sign-off edge cases are accepted only in their exact shape', () => {
+  const bump = (...trailers) => ['chore(deps): bump x from 1 to 2', '', 'Bumps x.', '', ...trailers, ''].join('\n');
+  const accepted = [
+    ['exact Dependabot commit', {}, bump(DEPENDABOT_SIGN_OFF)],
+    ['repeated exact sign-off, as a squash merge writes it', {}, bump(DEPENDABOT_SIGN_OFF, '', DEPENDABOT_SIGN_OFF)],
+    ['message that is only the sign-off', {}, `${DEPENDABOT_SIGN_OFF}\n`],
+  ];
+  for (const [label, headers, message] of accepted) {
+    const result = scanRawCommit({ ...headers, message });
+    assert.equal(result.status, 0, `${label}\n${result.output}`);
+  }
+
+  const supportPrefix = SIGN_OFF_ADDRESS.split('@')[0];
+  const supportDomain = SIGN_OFF_ADDRESS.split('@')[1];
+  const rejected = [
+    ['forged Dependabot author header with a human committer', { committers: [CONTRIBUTOR] }, bump(DEPENDABOT_SIGN_OFF)],
+    ['copied sign-off in a human commit', { authors: [CONTRIBUTOR] }, bump(DEPENDABOT_SIGN_OFF)],
+    ['human author with a Dependabot committer', { authors: [CONTRIBUTOR], committers: [DEPENDABOT_AUTHOR] }, bump(DEPENDABOT_SIGN_OFF)],
+    ['lower-case trailer key', {}, bump(DEPENDABOT_SIGN_OFF.replace('Signed-off-by', 'signed-off-by'))],
+    ['upper-case address', {}, bump(DEPENDABOT_SIGN_OFF.replace(SIGN_OFF_ADDRESS, SIGN_OFF_ADDRESS.toUpperCase()))],
+    ['capitalised signer name', {}, bump(DEPENDABOT_SIGN_OFF.replace('dependabot[bot]', 'Dependabot[bot]'))],
+    ['author address case variant', { authors: [DEPENDABOT_AUTHOR.replace('+dependabot', '+Dependabot')] }, bump(DEPENDABOT_SIGN_OFF)],
+    ['trailing space', {}, bump(`${DEPENDABOT_SIGN_OFF} `)],
+    ['trailing tab', {}, bump(`${DEPENDABOT_SIGN_OFF}\t`)],
+    ['CRLF line endings', {}, bump(DEPENDABOT_SIGN_OFF).replaceAll('\n', '\r\n')],
+    ['vertical tab after the sign-off', {}, bump(`${DEPENDABOT_SIGN_OFF}\u000b`)],
+    ['line separator glued before the sign-off', {}, bump(`x\u2028${DEPENDABOT_SIGN_OFF}`)],
+    ['look-alike local part', {}, bump(`Signed-off-by: ${DEPENDABOT_NAME} <\u0455${supportPrefix.slice(1)}@${supportDomain}>`)],
+    ['second sign-off with an unapproved address', {}, bump(DEPENDABOT_SIGN_OFF, `Signed-off-by: PRIVATE_SIGNER_MARKER <${['owner', '@', 'personal.invalid'].join('')}>`)],
+    ['two Dependabot author headers', { authors: [DEPENDABOT_AUTHOR, DEPENDABOT_AUTHOR] }, bump(DEPENDABOT_SIGN_OFF)],
+    ['two GitHub committer headers', { committers: [GITHUB_SERVICE_IDENTITY, GITHUB_SERVICE_IDENTITY] }, bump(DEPENDABOT_SIGN_OFF)],
+    ['sign-off inside an auxiliary header', { extraHeaders: ['mergetag object 0000000000000000000000000000000000000000', ` ${DEPENDABOT_SIGN_OFF}`] }, bump('Plain body.')],
+  ];
+  for (const [label, headers, message] of rejected) {
+    const result = scanRawCommit({ ...headers, message });
+    assert.notEqual(result.status, 0, label);
+    assert.match(result.output, /commit-metadata/, label);
+    assert.doesNotMatch(result.output, /PRIVATE_SIGNER_MARKER|personal\.invalid|support@/i, label);
   }
 });
 

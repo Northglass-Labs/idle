@@ -33,7 +33,7 @@ const PROTECTED_IMPORT_FILES = new Set([
   'docs/UPSTREAM-SYNC.md',
   'scripts/check-docs-hygiene.sh',
   'scripts/check-public-git-metadata.mjs',
-  'scripts/check-public-git-metadata.test.mjs',
+  'scripts/public-git-metadata.test.mjs',
   'scripts/check-upstream-cruft.sh',
   'scripts/check-upstream-cruft.mjs',
   'scripts/check-upstream-cruft.test.mjs',
@@ -51,7 +51,11 @@ const REVIEWABLE_MAINTENANCE_CONTROLS = new Set([
   'scripts/container-boundary.test.mjs',
   'scripts/dependency-patch-boundary.test.mjs',
   'scripts/dependency-update-boundary.test.mjs',
+  'scripts/postinstall.cjs',
 ]);
+// Root dependency patches rewrite third-party code on every install and at
+// prepack, so they are protected like package.json and reviewable the same way.
+const DEPENDENCY_PATCH_PATTERN = /^patches\/[^/]+\.cjs$/;
 
 const EXACT_SCAN_EXCLUSIONS = new Set([
   POLICY_FILE,
@@ -170,11 +174,16 @@ function isExcluded(relativePath) {
   return EXACT_SCAN_EXCLUSIONS.has(relativePath) || EXCLUDED_BASENAMES.has(path.posix.basename(relativePath));
 }
 
+function isReviewableMaintenanceControl(relativePath) {
+  return REVIEWABLE_MAINTENANCE_CONTROLS.has(relativePath) || DEPENDENCY_PATCH_PATTERN.test(relativePath);
+}
+
 function isProtectedImportPath(relativePath) {
   const scriptName = relativePath.startsWith('scripts/') ? path.posix.basename(relativePath) : '';
   return (
     POLICY_FILES.has(relativePath) ||
     PROTECTED_IMPORT_FILES.has(relativePath) ||
+    isReviewableMaintenanceControl(relativePath) ||
     (scriptName && (
       scriptName.startsWith('check-') ||
       scriptName.startsWith('verify-') ||
@@ -1094,7 +1103,7 @@ function scanDelta(root, {
       if (
         !allowReviewedControls ||
         change.status.startsWith('D') ||
-        changedPaths(change).some((relativePath) => !REVIEWABLE_MAINTENANCE_CONTROLS.has(relativePath))
+        changedPaths(change).some((relativePath) => !isReviewableMaintenanceControl(relativePath))
       ) {
         issues.push({ kind: 'protected-import-control', path: change.path });
         continue;

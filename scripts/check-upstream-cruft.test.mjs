@@ -614,6 +614,58 @@ test('trusted CI accepts an exact pre-reviewed protected maintenance delta', () 
   });
 });
 
+test('install-time dependency patches are protected controls that accept an exact review', () => {
+  for (const relativePath of ['patches/rewrite-fixture-dependency.cjs', 'scripts/postinstall.cjs']) {
+    withRepo({ [relativePath]: "'use strict';\n", 'src/client.ts': 'export const version = 1;\n' }, (root) => {
+      const base = git(root, 'rev-parse', 'HEAD');
+      put(root, relativePath, "'use strict';\nrequire('node:fs').writeFileSync('x', 'y');\n");
+      git(root, 'add', relativePath);
+      git(root, 'commit', '-qm', 'fixture dependency patch change');
+      const candidate = git(root, 'rev-parse', 'HEAD');
+      const patch = spawnSync(
+        'git',
+        ['diff', '--binary', '--full-index', '--no-color', '--no-ext-diff', base, candidate, '--', '.'],
+        { cwd: root, encoding: null },
+      );
+      assert.equal(patch.status, 0, patch.stderr?.toString('utf8'));
+
+      const blocked = run(root, ['--ci-diff', base, candidate]);
+      const output = `${blocked.stdout}\n${blocked.stderr}`;
+      assert.notEqual(blocked.status, 0, relativePath);
+      const approval = reviewLine(output, 'protected-import-control', relativePath, 'Reviewed exact dependency patch');
+
+      git(root, 'reset', '--hard', '-q', base);
+      put(root, '.upstream-import-review.txt', `${approval}\n`);
+      git(root, 'add', '.upstream-import-review.txt');
+      git(root, 'commit', '-qm', 'approve exact dependency patch');
+      const reviewCommit = git(root, 'rev-parse', 'HEAD');
+      const applied = spawnSync('git', ['apply', '--index', '--binary', '-'], {
+        cwd: root,
+        encoding: null,
+        input: patch.stdout,
+      });
+      assert.equal(applied.status, 0, applied.stderr?.toString('utf8'));
+      git(root, 'commit', '-qm', 'apply reviewed dependency patch');
+      const reviewed = run(root, ['--ci-diff', reviewCommit, git(root, 'rev-parse', 'HEAD')]);
+      assert.equal(reviewed.status, 0, `${relativePath}\n${reviewed.stdout}\n${reviewed.stderr}`);
+    });
+  }
+});
+
+test('the public metadata refusal tests cannot change through maintenance review', () => {
+  withRepo({ 'scripts/public-git-metadata.test.mjs': "import test from 'node:test';\n" }, (root) => {
+    const base = git(root, 'rev-parse', 'HEAD');
+    put(root, 'scripts/public-git-metadata.test.mjs', "import test from 'node:test';\ntest.skip('x', () => {});\n");
+    git(root, 'add', 'scripts/public-git-metadata.test.mjs');
+    git(root, 'commit', '-qm', 'fixture metadata test change');
+    const blocked = run(root, ['--ci-diff', base, git(root, 'rev-parse', 'HEAD')]);
+    const output = `${blocked.stdout}\n${blocked.stderr}`;
+    assert.notEqual(blocked.status, 0);
+    assert.match(output, /protected-import-control/);
+    assert.doesNotMatch(output, /fingerprint [a-f0-9]{64}/);
+  });
+});
+
 test('trusted CI keeps workflow and policy controls outside maintenance review', () => {
   withRepo({ '.github/workflows/hygiene.yml': 'permissions: read-all\n' }, (root) => {
     const base = git(root, 'rev-parse', 'HEAD');

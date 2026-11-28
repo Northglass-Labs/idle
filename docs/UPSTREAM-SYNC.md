@@ -142,11 +142,15 @@ Approved commit email identities are `hello@northglass.io` with the Northglass
 name, or a GitHub-generated `users.noreply.github.com` address. GitHub's exact
 service identity is also accepted for web-created commits and merges.
 Dependabot's exact `Signed-off-by: dependabot[bot]` trailer names GitHub's
-support address; the metadata guard accepts that address only as that complete
-trailer line in a commit authored by Dependabot's GitHub identity, and rejects
-it as an identity, in tag metadata, and anywhere else in a message. Keep the
-commit message public-safe and record only the source commit identifier; do not
-copy unrelated upstream notes or identity metadata into Idle.
+support address. Commit headers are self-asserted, so this is a format check,
+not proof of origin: the metadata guard accepts that address only as that
+complete trailer line, in a commit with exactly one author header naming
+Dependabot's `users.noreply.github.com` address and exactly one committer
+header naming GitHub's service identity, the shape GitHub writes for
+Dependabot commits and their squash merges. The address is rejected as an
+identity, in tag metadata, and anywhere else in a message. Keep the commit
+message public-safe and record only the source commit identifier; do not copy
+unrelated upstream notes or identity metadata into Idle.
 
 ## What the guard enforces
 
@@ -169,13 +173,15 @@ commit described above, which cannot add review records or weaken controls.
 New inline secret-scanner suppression directives are non-reviewable and must be
 removed rather than imported.
 
-Non-upstream dependency maintenance sometimes must change `package.json` or one
-of the three dependency and container boundary tests that verifies the release
-graph. Trusted CI permits only those four paths after a separate policy-only
-pull request records an exact `protected-import-control` review for every
-affected path. Workflow, scanner, publication-policy, metadata, attribution,
-license, and other boundary controls remain ineligible for this path. Generate
-the fingerprints by running the trusted base guard over the committed candidate:
+Non-upstream dependency maintenance sometimes must change `package.json`, one
+of the three dependency and container boundary tests that verify the release
+graph, `scripts/postinstall.cjs`, or a root `patches/*.cjs` script that rewrites
+installed dependencies. Trusted CI permits only those paths after a separate
+policy-only pull request records an exact `protected-import-control` review for
+every affected path. Workflow, scanner, publication-policy, metadata,
+attribution, license, and other boundary controls remain ineligible for this
+path. Generate the fingerprints by running the trusted base guard over the
+committed candidate:
 
 ```bash
 BASE_SHA="$(git merge-base origin/main HEAD)"
