@@ -6,7 +6,9 @@ const { s3Mock, ClientMock } = vi.hoisted(() => {
         removeObjects: vi.fn().mockResolvedValue(undefined),
         bucketExists: vi.fn().mockResolvedValue(true),
     };
-    return { s3Mock, ClientMock: vi.fn(() => s3Mock) };
+    // MinIO constructs its client with `new`, so the mock needs a constructible
+    // implementation; returning an object from it yields that object.
+    return { s3Mock, ClientMock: vi.fn(function () { return s3Mock; }) };
 });
 
 vi.mock('minio', () => ({ Client: ClientMock }));
