@@ -1,5 +1,8 @@
 # Deploy the Idle web app to Vercel
 
+These steps are for running your own Idle web app. They are not how Northglass
+deploys its hosted service; [Delivery](../DELIVERY.md) describes that.
+
 Vercel can host Idle's static Expo web export. The stateful relay needs a
 long-running Socket.IO server and persistent `/data` storage, so deploy it on a
 server target first.

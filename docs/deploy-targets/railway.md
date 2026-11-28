@@ -1,5 +1,8 @@
 # Deploy the Idle relay to Railway
 
+These steps are for running your own Idle relay. They are not how Northglass
+deploys its hosted service; [Delivery](../DELIVERY.md) describes that.
+
 Railway can build the root `Dockerfile` from a GitHub fork. The committed
 `railway.json` selects that Dockerfile, configures `GET /health`, and uses a
 bounded restart policy. A persistent volume and the relay secret are still

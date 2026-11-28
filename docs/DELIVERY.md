@@ -4,6 +4,13 @@ How a change in this repository reaches people. Nothing deploys on merge: a
 merge to `main` runs verification only, and every release is started by a
 maintainer.
 
+Only some checks gate a merge. The required checks are the type check, the
+five package test jobs, CodeQL, public hygiene, the trusted static policy, and
+the private publication scan. The image verifications below and the CLI smoke
+test also run on pull requests and `main`, but they are not required checks,
+so a failure there does not block a merge; read their results before merging
+and before any release.
+
 | Surface | Verified here by | Released by |
 |---|---|---|
 | Relay server | [Server Release Verification](../.github/workflows/deploy-server.yml) | A maintainer, by hand, outside this repository |
@@ -55,13 +62,15 @@ fixed patch version and deprecate the bad one.
 ## iOS app
 
 A maintainer runs the [TestFlight workflow](../.github/workflows/deploy-testflight.yml)
-with the exact 40-character `main` commit to build. It runs in the protected
-`production` environment, builds with EAS, and submits the build to TestFlight.
-Submitting a build for App Store review is a separate manual step in App Store
-Connect.
+from `main` with the full 40-character SHA of the current head of `main`; the
+workflow refuses any other commit, including an older `main` commit. It runs in
+the protected `production` environment, builds with EAS, and submits the build
+to TestFlight. Submitting a build for App Store review is a separate manual
+step in App Store Connect.
 
 ## Not available yet
 
-This repository has no automatic deployment, preview environments, or scripted
-health-check and rollback commands for the hosted service. Treat any document
-that describes them as out of date.
+This repository has no automatic deployment of the Northglass-hosted service,
+no preview environments for it, and no scripted health-check or rollback
+commands for it. The [deployment targets](deploy-targets/README.md) describe
+deploying your own relay or web app, which is a different thing.

@@ -58,6 +58,8 @@ CLAUDE.local.md
 **/.codex/
 .mcp.json
 **/.mcp.json
+.cursorrules
+**/.cursorrules
 .worktrees/
 .dev/worktree/
 .plan
