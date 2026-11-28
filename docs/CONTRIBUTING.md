@@ -174,6 +174,26 @@ names, dated assessment evidence, incident notes, release handoffs, or
 maintainer-tool configuration. `scripts/check-docs-hygiene.sh` enforces this
 boundary.
 
+In practice, the public hygiene and trusted policy checks hold contributors,
+human or automated, to these rules:
+
+- Agent and editor configuration (`AGENTS.md`, `CLAUDE.md`, `.claude/`,
+  `.codex/`, `.agents/`, `.mcp.json`, `.cursorrules`) stays on the maintainer's
+  machine. Git ignores it, and the hygiene check rejects it.
+- Commit and contact identities are `hello@northglass.io` with the Northglass
+  name, or a GitHub-generated `users.noreply.github.com` address.
+- Public text names no hosted-service host, server address, host path, or
+  private repository, and carries no dated plans, audits, or decision records.
+- `package.json` and the dependency and container boundary tests are protected
+  controls. Change them only after a separate review-only pull request records
+  the exact change in `.upstream-import-review.txt`, then rebase onto it, as
+  [UPSTREAM-SYNC.md](UPSTREAM-SYNC.md) describes. Workflows, scanners, and
+  policy files cannot be approved that way and need maintainer review.
+- Changes reach `main` through pull requests, and commits on `main` must be
+  signed.
+
+[Delivery](DELIVERY.md) describes how merged changes are released.
+
 Architecture and protocol documentation should describe current interfaces and
 trust boundaries. Put implementation details in the narrowest relevant reference
 and link to source instead of duplicating it across several guides.

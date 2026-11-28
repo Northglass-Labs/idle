@@ -1,5 +1,8 @@
 # Deploy the Idle relay to Fly.io
 
+These steps are for running your own Idle relay. They are not how Northglass
+deploys its hosted service; [Delivery](../DELIVERY.md) describes that.
+
 The committed `fly.toml` builds the root `Dockerfile`, routes HTTPS traffic to
 port `3005`, mounts `idle_data` at `/data`, and checks `GET /health`. Its app
 name and primary region are intentionally unset so a public checkout does not
