@@ -9,6 +9,16 @@ const CORPORATE_NAMES = new Set(['Northglass', 'Northglass Labs']);
 const GITHUB_SERVICE_EMAIL = 'noreply@github.com';
 const GITHUB_SERVICE_NAME = 'GitHub';
 const NOREPLY_DOMAIN = 'users.noreply.github.com';
+// Dependabot ends every commit it authors with this exact sign-off line, which
+// names GitHub's support address. Git headers are self-asserted, so the address
+// is accepted only on this exact line of a commit with exactly one author header
+// naming Dependabot and exactly one committer header naming GitHub's own service
+// identity, which is how GitHub writes Dependabot commits and their squash
+// merges. It is never an approved author, committer, tagger, tag-message, or
+// prose address.
+const DEPENDABOT_NAME = 'dependabot[bot]';
+const DEPENDABOT_EMAIL = '49699333+dependabot[bot]@users.noreply.github.com';
+const DEPENDABOT_SIGN_OFF = 'Signed-off-by: dependabot[bot] <support@github.com>';
 const UPSTREAM_BRAND_PATTERN = new RegExp([
   ['hap', 'py'].join(''),
   ['slo', 'pus'].join(''),
@@ -113,11 +123,30 @@ function addKinds(issues, scope, objectId, kinds) {
   for (const kind of kinds) issues.push({ kind, objectId, scope });
 }
 
+function isGitHubWrittenDependabotCommit(authors, committers) {
+  return (
+    authors.length === 1 &&
+    authors[0]?.name === DEPENDABOT_NAME &&
+    authors[0].email === DEPENDABOT_EMAIL &&
+    committers.length === 1 &&
+    committers[0]?.name === GITHUB_SERVICE_NAME &&
+    committers[0].email === GITHUB_SERVICE_EMAIL
+  );
+}
+
+function withoutDependabotSignOff(message) {
+  return message.split('\n').filter((line) => line !== DEPENDABOT_SIGN_OFF).join('\n');
+}
+
 function scanCommit(commitId, issues) {
   const object = parseObject(objectBytes('commit', commitId));
+  const authors = [];
+  const committers = [];
   for (const header of object.headers) {
     if (header.key === 'author' || header.key === 'committer') {
-      addKinds(issues, 'commit-metadata', commitId, identityIssueKinds(parseIdentity(header.value)));
+      const identity = parseIdentity(header.value);
+      (header.key === 'author' ? authors : committers).push(identity);
+      addKinds(issues, 'commit-metadata', commitId, identityIssueKinds(identity));
     } else if (header.key !== 'tree' && header.key !== 'parent') {
       // Git permits auxiliary and continuation headers (for example mergetag,
       // encoding, or signatures). Treat them as public metadata rather than an
@@ -125,7 +154,10 @@ function scanCommit(commitId, issues) {
       addKinds(issues, 'commit-metadata', commitId, unsafeTextKinds(header.value));
     }
   }
-  addKinds(issues, 'commit-metadata', commitId, unsafeTextKinds(object.message));
+  const message = isGitHubWrittenDependabotCommit(authors, committers)
+    ? withoutDependabotSignOff(object.message)
+    : object.message;
+  addKinds(issues, 'commit-metadata', commitId, unsafeTextKinds(message));
 }
 
 function visibleRefs() {

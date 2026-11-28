@@ -140,9 +140,17 @@ gate: `yarn verify:upstream-import --policy-range <base> <head>`.
 
 Approved commit email identities are `hello@northglass.io` with the Northglass
 name, or a GitHub-generated `users.noreply.github.com` address. GitHub's exact
-service identity is also accepted for web-created commits and merges. Keep the
-commit message public-safe and record only the source commit identifier; do not
-copy unrelated upstream notes or identity metadata into Idle.
+service identity is also accepted for web-created commits and merges.
+Dependabot's exact `Signed-off-by: dependabot[bot]` trailer names GitHub's
+support address. Commit headers are self-asserted, so this is a format check,
+not proof of origin: the metadata guard accepts that address only as that
+complete trailer line, in a commit with exactly one author header naming
+Dependabot's `users.noreply.github.com` address and exactly one committer
+header naming GitHub's service identity, the shape GitHub writes for
+Dependabot commits and their squash merges. The address is rejected as an
+identity, in tag metadata, and anywhere else in a message. Keep the commit
+message public-safe and record only the source commit identifier; do not copy
+unrelated upstream notes or identity metadata into Idle.
 
 ## What the guard enforces
 
@@ -158,20 +166,23 @@ copy unrelated upstream notes or identity metadata into Idle.
 
 Import deltas cannot add, remove, rename, or modify either policy file, the
 upstream/documentation/metadata guards and their boundary tests, `package.json`,
-GitHub workflows, Gitleaks policy, attribution files, or package licenses. A
+`scripts/postinstall.cjs`, root `patches/*.cjs`, GitHub workflows, Gitleaks
+policy, attribution files, or package licenses. A
 review-only or baseline-only policy update uses `--policy-diff`; mixed policy
 and product changes fail. The one exception is the isolated final exact-count
 commit described above, which cannot add review records or weaken controls.
 New inline secret-scanner suppression directives are non-reviewable and must be
 removed rather than imported.
 
-Non-upstream dependency maintenance sometimes must change `package.json` or one
-of the three dependency and container boundary tests that verifies the release
-graph. Trusted CI permits only those four paths after a separate policy-only
-pull request records an exact `protected-import-control` review for every
-affected path. Workflow, scanner, publication-policy, metadata, attribution,
-license, and other boundary controls remain ineligible for this path. Generate
-the fingerprints by running the trusted base guard over the committed candidate:
+Non-upstream dependency maintenance sometimes must change `package.json`, one
+of the three dependency and container boundary tests that verify the release
+graph, `scripts/postinstall.cjs`, or a root `patches/*.cjs` script that rewrites
+installed dependencies. Trusted CI permits only those paths after a separate
+policy-only pull request records an exact `protected-import-control` review for
+every affected path. Workflow, scanner, publication-policy, metadata,
+attribution, license, and other boundary controls remain ineligible for this
+path. Generate the fingerprints by running the trusted base guard over the
+committed candidate:
 
 ```bash
 BASE_SHA="$(git merge-base origin/main HEAD)"
