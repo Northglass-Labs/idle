@@ -1,7 +1,10 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi, type Mock } from 'vitest';
 import { homedir } from 'node:os';
 
 import { ApiMachineClient } from './apiMachine';
+import type { SpawnSessionOptions, SpawnSessionResult } from '../daemon/spawnSessionOptions';
+
+type SpawnSession = (options: SpawnSessionOptions) => Promise<SpawnSessionResult>;
 
 const VALID_CLAUDE_SESSION_ID = '123e4567-e89b-42d3-a456-426614174000';
 
@@ -31,7 +34,7 @@ function machineHomeHandlerFrom(client: ApiMachineClient): (params: unknown) => 
     return handler;
 }
 
-function clientWithSpawn(spawnSession: ReturnType<typeof vi.fn>) {
+function clientWithSpawn(spawnSession: Mock<SpawnSession>) {
     const client = new ApiMachineClient('token', machineClient());
     client.setRPCHandlers({
         spawnSession,
@@ -107,7 +110,7 @@ describe('ApiMachineClient spawn RPC boundary', () => {
             },
         ],
     ])('rejects a %s before spawning', async (_label, params) => {
-        const spawnSession = vi.fn().mockResolvedValue({ type: 'success', sessionId: 'must-not-spawn' });
+        const spawnSession = vi.fn<SpawnSession>().mockResolvedValue({ type: 'success', sessionId: 'must-not-spawn' });
         const handler = spawnHandlerFrom(clientWithSpawn(spawnSession));
 
         await expect(handler(params)).rejects.toThrow('Invalid spawn session request');
@@ -115,7 +118,7 @@ describe('ApiMachineClient spawn RPC boundary', () => {
     });
 
     it('accepts the supported app payload and defaults directory creation to denied', async () => {
-        const spawnSession = vi.fn().mockResolvedValue({ type: 'success', sessionId: 'idle-new' });
+        const spawnSession = vi.fn<SpawnSession>().mockResolvedValue({ type: 'success', sessionId: 'idle-new' });
         const handler = spawnHandlerFrom(clientWithSpawn(spawnSession));
         const environmentVariables = Object.fromEntries(
             Array.from({ length: 128 }, (_, index) => [`SAFE_${index}`, `value-${index}`]),
@@ -145,7 +148,7 @@ describe('ApiMachineClient spawn RPC boundary', () => {
     });
 
     it('preserves explicit directory-creation approval', async () => {
-        const spawnSession = vi.fn().mockResolvedValue({ type: 'success', sessionId: 'idle-new' });
+        const spawnSession = vi.fn<SpawnSession>().mockResolvedValue({ type: 'success', sessionId: 'idle-new' });
         const handler = spawnHandlerFrom(clientWithSpawn(spawnSession));
 
         await handler({

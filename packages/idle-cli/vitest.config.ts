@@ -10,7 +10,6 @@ const liveAgentProjects = [
             fileParallelism: false,
             hookTimeout: 120_000,
             maxWorkers: 1,
-            minWorkers: 1,
             testTimeout: 180_000,
             include: [
                 'src/claude/claude.integration.test.ts',
@@ -29,7 +28,6 @@ const liveAgentProjects = [
             fileParallelism: false,
             hookTimeout: 120_000,
             maxWorkers: 1,
-            minWorkers: 1,
             testTimeout: 180_000,
             include: [
                 'src/claude/planMode.integration.test.ts',
@@ -46,7 +44,6 @@ const liveAgentProjects = [
             fileParallelism: false,
             hookTimeout: 120_000,
             maxWorkers: 1,
-            minWorkers: 1,
             testTimeout: 60_000,
             include: [
                 'src/openclaw/openclaw.integration.test.ts',
@@ -83,7 +80,6 @@ export default defineConfig({
                     fileParallelism: false,
                     hookTimeout: 120_000,
                     maxWorkers: 1,
-                    minWorkers: 1,
                     testTimeout: 60_000,
                     include: [
                         'src/sandbox/network.integration.test.ts',
@@ -102,7 +98,6 @@ export default defineConfig({
                     fileParallelism: false,
                     hookTimeout: 120_000,
                     maxWorkers: 1,
-                    minWorkers: 1,
                     testTimeout: 60_000,
                     include: [
                         'src/daemon/daemon.integration.test.ts',

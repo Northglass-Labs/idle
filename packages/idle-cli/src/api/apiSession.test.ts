@@ -207,7 +207,9 @@ describe('ApiSessionClient v3 messages API migration', () => {
     };
 
     beforeEach(() => {
-        vi.clearAllMocks();
+        // Vitest 4's restoreAllMocks no longer resets vi.fn() implementations,
+        // so reset them here; each test starts from the hoisted defaults.
+        vi.resetAllMocks();
         mockShouldReconnect.mockReturnValue(true);
         socketHandlers = {};
         session = makeSession();

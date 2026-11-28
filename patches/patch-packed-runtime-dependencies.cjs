@@ -184,13 +184,59 @@ const reviewedPackages = [
     ],
   },
   {
+    // The root **/minio/stream-json resolution moves MinIO to stream-json 3,
+    // whose JSONL parser is a lowercase module with an asStream() factory. The
+    // two notification transforms are the same reviewed ones the production
+    // image applies with patch-minio-stream-json-v3.cjs after its install.
     name: 'minio',
     version: '8.0.7',
-    files: [],
-    checks: [
+    files: [
       {
+        relativePath: 'dist/main/notification.js',
+        patchedSha256: '2ed4d46e2214f89c7a094ca49e74afab15d7d7980cd0aced2f0fdf1aae68c93b',
+        inputs: [
+          {
+            sha256: 'c9969ce05fff5a97f2f7d526f0bab53324cc329652fb09181fd705e169d09ac4',
+            replacements: [
+              {
+                from: 'var _Parser = require("stream-json/jsonl/Parser.js");',
+                to: 'var _Parser = require("stream-json/jsonl/parser.js");',
+              },
+              {
+                from: 'const asm = _Parser.make();',
+                to: 'const asm = _Parser.parser.asStream();',
+              },
+            ],
+          },
+        ],
+      },
+      {
+        relativePath: 'dist/esm/notification.mjs',
+        patchedSha256: '2d1cab3c0b426644f3baa2b2294620e517f1976014ba67e0b745ecd66f290945',
+        inputs: [
+          {
+            sha256: 'feb62bd0d140edced9b06b5b3971395e1316998813e1d50eaf9b37d255d6221b',
+            replacements: [
+              {
+                from: "import jsonLineParser from 'stream-json/jsonl/Parser.js';",
+                to: "import jsonLineParser from 'stream-json/jsonl/parser.js';",
+              },
+              {
+                from: 'const asm = jsonLineParser.make();',
+                to: 'const asm = jsonLineParser.asStream();',
+              },
+            ],
+          },
+        ],
+      },
+      {
+        // The server package bundles MinIO with stream-json 3, so its manifest
+        // must declare the version it actually runs.
         relativePath: 'package.json',
-        sha256: '06e434631e49ceb17eb8ad566cf59487733302648d17ccacf1c15d433aa94270',
+        originalSha256: '06e434631e49ceb17eb8ad566cf59487733302648d17ccacf1c15d433aa94270',
+        patchedSha256: '201980b545d437dcd8157b81fff9623436de19883549e5c8e55ccf93850436f8',
+        from: '"stream-json": "^1.8.0"',
+        to: '"stream-json": "^3.6.0"',
       },
     ],
   },
