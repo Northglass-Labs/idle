@@ -9,6 +9,13 @@ const CORPORATE_NAMES = new Set(['Northglass', 'Northglass Labs']);
 const GITHUB_SERVICE_EMAIL = 'noreply@github.com';
 const GITHUB_SERVICE_NAME = 'GitHub';
 const NOREPLY_DOMAIN = 'users.noreply.github.com';
+// Dependabot ends every commit it authors with this exact sign-off line, which
+// names GitHub's support address. That address is accepted only on this exact
+// line of a commit whose single author is Dependabot's GitHub identity; it is
+// never an approved author, committer, tagger, tag-message, or prose address.
+const DEPENDABOT_NAME = 'dependabot[bot]';
+const DEPENDABOT_EMAIL = '49699333+dependabot[bot]@users.noreply.github.com';
+const DEPENDABOT_SIGN_OFF = 'Signed-off-by: dependabot[bot] <support@github.com>';
 const UPSTREAM_BRAND_PATTERN = new RegExp([
   ['hap', 'py'].join(''),
   ['slo', 'pus'].join(''),
@@ -113,11 +120,26 @@ function addKinds(issues, scope, objectId, kinds) {
   for (const kind of kinds) issues.push({ kind, objectId, scope });
 }
 
+function isDependabotAuthor(authors) {
+  return (
+    authors.length === 1 &&
+    authors[0]?.name === DEPENDABOT_NAME &&
+    authors[0].email === DEPENDABOT_EMAIL
+  );
+}
+
+function withoutDependabotSignOff(message) {
+  return message.split('\n').filter((line) => line !== DEPENDABOT_SIGN_OFF).join('\n');
+}
+
 function scanCommit(commitId, issues) {
   const object = parseObject(objectBytes('commit', commitId));
+  const authors = [];
   for (const header of object.headers) {
     if (header.key === 'author' || header.key === 'committer') {
-      addKinds(issues, 'commit-metadata', commitId, identityIssueKinds(parseIdentity(header.value)));
+      const identity = parseIdentity(header.value);
+      if (header.key === 'author') authors.push(identity);
+      addKinds(issues, 'commit-metadata', commitId, identityIssueKinds(identity));
     } else if (header.key !== 'tree' && header.key !== 'parent') {
       // Git permits auxiliary and continuation headers (for example mergetag,
       // encoding, or signatures). Treat them as public metadata rather than an
@@ -125,7 +147,10 @@ function scanCommit(commitId, issues) {
       addKinds(issues, 'commit-metadata', commitId, unsafeTextKinds(header.value));
     }
   }
-  addKinds(issues, 'commit-metadata', commitId, unsafeTextKinds(object.message));
+  const message = isDependabotAuthor(authors)
+    ? withoutDependabotSignOff(object.message)
+    : object.message;
+  addKinds(issues, 'commit-metadata', commitId, unsafeTextKinds(message));
 }
 
 function visibleRefs() {

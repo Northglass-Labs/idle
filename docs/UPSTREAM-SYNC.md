@@ -140,7 +140,11 @@ gate: `yarn verify:upstream-import --policy-range <base> <head>`.
 
 Approved commit email identities are `hello@northglass.io` with the Northglass
 name, or a GitHub-generated `users.noreply.github.com` address. GitHub's exact
-service identity is also accepted for web-created commits and merges. Keep the
+service identity is also accepted for web-created commits and merges.
+Dependabot's exact `Signed-off-by: dependabot[bot]` trailer names GitHub's
+support address; the metadata guard accepts that address only as that complete
+trailer line in a commit authored by Dependabot's GitHub identity, and rejects
+it as an identity, in tag metadata, and anywhere else in a message. Keep the
 commit message public-safe and record only the source commit identifier; do not
 copy unrelated upstream notes or identity metadata into Idle.
 

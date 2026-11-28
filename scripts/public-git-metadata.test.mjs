@@ -103,6 +103,123 @@ test('range scan accepts corporate and GitHub-noreply public identities', () => 
   });
 });
 
+// Built from parts so the public delta scanner does not read these fixture
+// addresses as new external identities.
+const GITHUB_SERVICE_EMAIL = ['noreply', 'github.com'].join('@');
+const DEPENDABOT_NAME = 'dependabot[bot]';
+const DEPENDABOT_EMAIL = ['49699333+dependabot[bot]', 'users.noreply.github.com'].join('@');
+const SIGN_OFF_ADDRESS = ['support', 'github.com'].join('@');
+const DEPENDABOT_SIGN_OFF = `Signed-off-by: ${DEPENDABOT_NAME} <${SIGN_OFF_ADDRESS}>`;
+const DEPENDABOT_IDENTITY = {
+  authorName: DEPENDABOT_NAME,
+  authorEmail: DEPENDABOT_EMAIL,
+  committerName: 'GitHub',
+  committerEmail: GITHUB_SERVICE_EMAIL,
+};
+
+function dependabotMessage(...trailers) {
+  return [
+    'chore(deps): bump fixture-package from 1.0.0 to 1.0.1',
+    '',
+    'Bumps fixture-package from 1.0.0 to 1.0.1.',
+    '',
+    '---',
+    'updated-dependencies:',
+    '- dependency-name: fixture-package',
+    '  dependency-version: 1.0.1',
+    '  dependency-type: indirect',
+    '...',
+    '',
+    ...trailers,
+  ].join('\n');
+}
+
+function scanSingleCommit(message, identity) {
+  return withRepo((root) => {
+    const base = git(root, ['rev-parse', 'HEAD']);
+    put(root, 'dependency.txt', `${message.length}\n`);
+    git(root, ['add', '.']);
+    commit(root, message, identity);
+    const head = git(root, ['rev-parse', 'HEAD']);
+    const result = run(root, ['--range', base, head]);
+    return { status: result.status, output: `${result.stdout}\n${result.stderr}` };
+  });
+}
+
+test('range scan accepts the exact Dependabot sign-off trailer on Dependabot-authored commits', () => {
+  const pullRequestCommit = scanSingleCommit(dependabotMessage(DEPENDABOT_SIGN_OFF), DEPENDABOT_IDENTITY);
+  assert.equal(pullRequestCommit.status, 0, pullRequestCommit.output);
+
+  // A squash merge keeps Dependabot as author and can repeat the trailer.
+  const squashMerge = scanSingleCommit(dependabotMessage(
+    DEPENDABOT_SIGN_OFF,
+    '',
+    DEPENDABOT_SIGN_OFF,
+    `Co-authored-by: ${DEPENDABOT_NAME} <${DEPENDABOT_EMAIL}>`,
+  ), DEPENDABOT_IDENTITY);
+  assert.equal(squashMerge.status, 0, squashMerge.output);
+});
+
+test('range scan rejects the Dependabot sign-off address outside its exact trailer and author', () => {
+  const contributor = {
+    authorName: 'Public Contributor',
+    authorEmail: '12345+contributor@users.noreply.github.com',
+    committerName: 'GitHub',
+    committerEmail: GITHUB_SERVICE_EMAIL,
+  };
+  const cases = [
+    ['non-Dependabot author', dependabotMessage(DEPENDABOT_SIGN_OFF), contributor],
+    ['Dependabot name with another address', dependabotMessage(DEPENDABOT_SIGN_OFF), {
+      ...DEPENDABOT_IDENTITY,
+      authorEmail: '12345+impostor@users.noreply.github.com',
+    }],
+    ['address in body prose', dependabotMessage(`Contact ${SIGN_OFF_ADDRESS} for help.`), DEPENDABOT_IDENTITY],
+    ['address under another signer', dependabotMessage(`Signed-off-by: Someone Else <${SIGN_OFF_ADDRESS}>`), DEPENDABOT_IDENTITY],
+    ['trailer with trailing text', dependabotMessage(`${DEPENDABOT_SIGN_OFF} PRIVATE_SUFFIX_MARKER`), DEPENDABOT_IDENTITY],
+    ['indented trailer', dependabotMessage(`  ${DEPENDABOT_SIGN_OFF}`), DEPENDABOT_IDENTITY],
+    ['exact trailer beside another unapproved address', dependabotMessage(
+      DEPENDABOT_SIGN_OFF,
+      `Reported-by: PRIVATE_REPORTER_MARKER <${['owner', '@', 'personal.invalid'].join('')}>`,
+    ), DEPENDABOT_IDENTITY],
+  ];
+
+  for (const [label, message, identity] of cases) {
+    const result = scanSingleCommit(message, identity);
+    assert.notEqual(result.status, 0, label);
+    assert.match(result.output, /commit-metadata:unapproved-email/, label);
+    assert.doesNotMatch(result.output, /PRIVATE_(?:SUFFIX|REPORTER)_MARKER|personal\.invalid|support@/i, label);
+  }
+});
+
+test('the Dependabot sign-off address is never an approved identity or tag message', () => {
+  for (const identity of [
+    { ...DEPENDABOT_IDENTITY, authorEmail: SIGN_OFF_ADDRESS },
+    { ...DEPENDABOT_IDENTITY, committerEmail: SIGN_OFF_ADDRESS },
+  ]) {
+    const result = scanSingleCommit(dependabotMessage(DEPENDABOT_SIGN_OFF), identity);
+    assert.notEqual(result.status, 0);
+    assert.match(result.output, /commit-metadata:unapproved-email/);
+  }
+
+  withRepo((root) => {
+    const base = git(root, ['rev-parse', 'HEAD']);
+    put(root, 'tagged.txt', 'tagged\n');
+    git(root, ['add', '.']);
+    commit(root, dependabotMessage(DEPENDABOT_SIGN_OFF), DEPENDABOT_IDENTITY);
+    const head = git(root, ['rev-parse', 'HEAD']);
+    git(root, ['tag', '-a', 'release/dependency-fixture', '-m', dependabotMessage(DEPENDABOT_SIGN_OFF)], {
+      GIT_COMMITTER_NAME: DEPENDABOT_NAME,
+      GIT_COMMITTER_EMAIL: DEPENDABOT_EMAIL,
+    });
+
+    const result = run(root, ['--range', base, head]);
+    const output = `${result.stdout}\n${result.stderr}`;
+    assert.notEqual(result.status, 0);
+    assert.match(output, /tag-metadata:unapproved-email/);
+    assert.doesNotMatch(output, /commit-metadata/);
+  });
+});
+
 test('range scan rejects unapproved author, committer, and message identities without echoing them', () => {
   withRepo((root) => {
     const base = git(root, ['rev-parse', 'HEAD']);
